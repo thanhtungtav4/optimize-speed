@@ -227,7 +227,7 @@ class ImageOptimizationService implements ServiceInterface
         $loading_attr = $is_lcp ? 'eager' : 'lazy';
         $fetch_priority = $is_lcp ? 'fetchpriority="high"' : '';
 
-        $html = '<picture class="opti-pic">';
+        $html = '<picture class="optimize-picture">';
 
         // AVIF
         $avif_url = null;
@@ -286,7 +286,8 @@ class ImageOptimizationService implements ServiceInterface
         return preg_replace_callback(
             '#(<img\b[^>]*\ssrc=["\'])([^"\']*wp-content/uploads[^"\']*)(["\'][^>]*>)#i',
             function ($m) {
-                return $this->replace_single_img($m[0]) ?: $m[0]; },
+                return $this->replace_single_img($m[0]) ?: $m[0];
+            },
             $content
         );
     }
@@ -300,7 +301,8 @@ class ImageOptimizationService implements ServiceInterface
         return preg_replace_callback(
             '#<img\b[^>]*>#i',
             function ($m) {
-                return $this->replace_single_img($m[0]) ?: $m[0]; },
+                return $this->replace_single_img($m[0]) ?: $m[0];
+            },
             $block_content
         );
     }
@@ -310,7 +312,7 @@ class ImageOptimizationService implements ServiceInterface
         $img_tag = is_array($match) ? ($match[0] ?? '') : $match;
         if (empty($img_tag))
             return $img_tag;
-        if (strpos($img_tag, 'opti-pic') !== false || strpos($img_tag, 'data-opti="1"') !== false)
+        if (strpos($img_tag, 'optimize-picture') !== false || strpos($img_tag, 'data-optimize-picture="1"') !== false)
             return $img_tag;
         if (strpos($img_tag, '<img') === false)
             return $img_tag;
