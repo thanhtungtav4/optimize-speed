@@ -31,32 +31,67 @@ class AdminService implements ServiceInterface
     {
         return [
             'bloat_removal' => [
+                // WordPress Core
                 ['disable_emojis', 'Disable Emojis', 'Removes extra JS/CSS'],
                 ['disable_embeds', 'Disable Embeds', 'Removes oEmbed JS/Routes'],
                 ['disable_xmlrpc', 'Disable XML-RPC', 'Security & Performance'],
-                ['disable_jquery_migrate', 'Disable jQuery Migrate', ''],
-                ['disable_widget_blocks', 'Disable Widget Block Editor', ''],
-                ['remove_meta_generator', 'Remove Meta Generator Tag', ''],
-                ['remove_wlwmanifest', 'Remove WLW Manifest Link', ''],
-                ['remove_shortlink', 'Remove Shortlink Header', ''],
-                ['remove_rss_feed_links', 'Remove RSS Feed Links', ''],
-                ['disable_rss_feeds', 'Disable All RSS Feeds', ''],
-                ['remove_rss_generator', 'Remove RSS Generator Tag', ''],
-                ['disable_post_revisions', 'Disable Post Revisions', ''],
-                ['disable_app_passwords', 'Disable Application Passwords', ''],
-                ['limit_heartbeat', 'Limit Heartbeat', '60s'],
-                ['disable_heartbeat', 'Disable Heartbeat API', 'Completely disable'],
-                ['disable_rest_api', 'Disable REST API', 'Restrict to logged-in users'],
+                ['disable_jquery_migrate', 'Disable jQuery Migrate', 'Removes compatibility layer'],
+                ['remove_jquery', 'Remove jQuery Completely', '⚠️ May break themes/plugins'],
+                ['disable_widget_blocks', 'Disable Widget Block Editor', 'Use classic widgets'],
+                
+                // Meta Tags & Links
+                ['remove_meta_generator', 'Remove Meta Generator Tag', 'Hide WP version'],
+                ['remove_wp_version', 'Remove WP Version', 'From all sources'],
+                ['remove_wlwmanifest', 'Remove WLW Manifest Link', 'Windows Live Writer'],
+                ['remove_shortlink', 'Remove Shortlink Header', 'Link rel shortlink'],
                 ['remove_rsd_link', 'Remove RSD Link', 'EditURI for external tools'],
                 ['remove_rest_api_link', 'Remove REST API Link', 'Link tag in header'],
+                ['disable_canonical', 'Disable Canonical URL', 'Remove rel canonical'],
+                
+                // RSS & Feeds
+                ['remove_rss_feed_links', 'Remove RSS Feed Links', 'Feed discovery links'],
+                ['disable_rss_feeds', 'Disable All RSS Feeds', 'Redirect to homepage'],
+                ['remove_rss_generator', 'Remove RSS Generator Tag', 'Hide WP version'],
+                
+                // Database & Revisions
+                ['disable_post_revisions', 'Disable Post Revisions', 'Stop saving revisions'],
+                ['limit_post_revisions_number', 'Limit Post Revisions', 'Input number: 3-10 recommended'],
+                ['disable_app_passwords', 'Disable Application Passwords', 'WP 5.6+ feature'],
+                
+                // Performance
+                ['limit_heartbeat', 'Limit Heartbeat', '60s interval'],
+                ['disable_heartbeat', 'Disable Heartbeat API', 'Completely disable'],
+                ['disable_dns_prefetch', 'Disable DNS Prefetch', 'Remove resource hints'],
+                ['defer_javascript', 'Defer JavaScript', 'Add defer to scripts'],
+                
+                // Security & API
+                ['disable_rest_api', 'Disable REST API', 'Restrict to logged-in users'],
+                
+                // Assets & Styles
                 ['remove_query_strings', 'Remove Query Strings', 'Remove ?ver= from CSS/JS'],
                 ['disable_self_pingbacks', 'Disable Self Pingbacks', 'Stop pinging own posts'],
-                ['remove_dashicons', 'Remove Dashicons', 'Disable Dashicons on frontend'],
+                ['remove_dashicons', 'Remove Dashicons', 'Disable on frontend'],
                 ['disable_gravatars', 'Disable Gravatars', 'Remove Gravatar requests'],
-                ['disable_comments', 'Disable Comments', 'Completely disable comments'],
+                ['disable_google_fonts', 'Disable Google Fonts', 'Block all Google Fonts'],
+                ['remove_recent_comments_style', 'Remove Recent Comments Style', 'Widget CSS'],
+                
+                // Comments
+                ['disable_comments', 'Disable Comments', 'Completely disable system'],
+                
+                // Gutenberg
                 ['disable_global_styles', 'Disable Global Styles', 'Remove huge inline CSS & SVGs'],
                 ['disable_block_library', 'Disable Block CSS', 'If not using Gutenberg'],
-                ['optimize_elementor', 'Smart Elementor Assets', 'Unload if page not built with Elementor'],
+                ['disable_duotone_svg', 'Disable Duotone SVG', 'Remove Gutenberg filters'],
+                
+                // Page Builders
+                ['optimize_elementor', 'Smart Elementor Assets', '⚠️ Don\'t use with Elementor Headers'],
+                
+                // WooCommerce
+                ['disable_wc_cart_fragments', 'Disable WC Cart Fragments', 'Stop AJAX cart refresh'],
+                ['remove_wc_scripts_non_wc_pages', 'Remove WC Scripts on Non-WC Pages', 'Blog, pages, etc.'],
+                
+                // Security
+                ['disable_password_strength_meter', 'Disable Password Strength Meter', 'Frontend forms'],
             ]
         ];
     }
@@ -280,6 +315,33 @@ class AdminService implements ServiceInterface
                 font-size: 11px;
                 color: #d63638;
                 border-radius: 0 3px 3px 0;
+            }
+            
+            /* Number Input Card */
+            .option-card-number {
+                cursor: default;
+                border-color: #8c8f94;
+            }
+            
+            .option-card-number:hover {
+                background: #f9f9f9;
+                border-color: #8c8f94;
+                box-shadow: none;
+                transform: none;
+            }
+            
+            .option-card-number input[type="number"] {
+                width: 80px;
+                padding: 5px 8px;
+                border: 1px solid #8c8f94;
+                border-radius: 3px;
+                font-size: 14px;
+            }
+            
+            .option-card-number input[type="number"]:focus {
+                border-color: #2271b1;
+                box-shadow: 0 0 0 1px #2271b1;
+                outline: none;
             }
             
             /* Integration Grid */

@@ -33,22 +33,45 @@ $options = get_option('optimize_speed_settings', []);
                         foreach ($config['bloat_removal'] as $field) {
                             [$key, $label, $description] = $field;
                             $value = isset($options[$key]) ? $options[$key] : 0;
-                            $has_warning = ($key === 'optimize_elementor');
-                            ?>
-                            <label class="option-card">
-                                <input type="checkbox" name="optimize_speed_settings[<?php echo esc_attr($key); ?>]" 
-                                       value="1" <?php checked(1, $value); ?>>
-                                <span class="option-content">
-                                    <span class="option-title"><?php echo esc_html($label); ?></span>
-                                    <?php if ($description): ?>
+                            $has_warning = in_array($key, ['optimize_elementor', 'remove_jquery']);
+                            $is_number_input = ($key === 'limit_post_revisions_number');
+                            
+                            if ($is_number_input) {
+                                // Special number input field
+                                ?>
+                                <div class="option-card option-card-number">
+                                    <span class="option-content">
+                                        <span class="option-title"><?php echo esc_html($label); ?></span>
                                         <span class="option-desc"><?php echo esc_html($description); ?></span>
-                                    <?php endif; ?>
-                                    <?php if ($has_warning): ?>
-                                        <span class="option-warning">⚠️ Don't enable if using Elementor Header/Footer</span>
-                                    <?php endif; ?>
-                                </span>
-                            </label>
-                            <?php
+                                        <input type="number" 
+                                               name="optimize_speed_settings[<?php echo esc_attr($key); ?>]" 
+                                               value="<?php echo esc_attr($value ?: 5); ?>" 
+                                               min="1" 
+                                               max="50" 
+                                               placeholder="5"
+                                               class="small-text"
+                                               style="margin-top: 8px;">
+                                    </span>
+                                </div>
+                                <?php
+                            } else {
+                                // Regular checkbox field
+                                ?>
+                                <label class="option-card">
+                                    <input type="checkbox" name="optimize_speed_settings[<?php echo esc_attr($key); ?>]" 
+                                           value="1" <?php checked(1, $value); ?>>
+                                    <span class="option-content">
+                                        <span class="option-title"><?php echo esc_html($label); ?></span>
+                                        <?php if ($description): ?>
+                                            <span class="option-desc"><?php echo esc_html($description); ?></span>
+                                        <?php endif; ?>
+                                        <?php if ($has_warning): ?>
+                                            <span class="option-warning">⚠️ <?php echo $key === 'remove_jquery' ? 'May break themes/plugins using jQuery' : "Don't enable if using Elementor Header/Footer"; ?></span>
+                                        <?php endif; ?>
+                                    </span>
+                                </label>
+                                <?php
+                            }
                         }
                         ?>
                     </div>

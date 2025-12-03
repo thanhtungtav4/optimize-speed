@@ -22,12 +22,34 @@ All-in-one speed optimization plugin with Partytown integration and Native Image
 - LCP optimization (`fetchpriority="high"`)
 - Bulk image regeneration
 
-### 🧹 Bloat Removal
-26+ WordPress bloat removal options:
+### 🧹 Bloat Removal (39+ options!)
+**WordPress Core:**
 - Disable Emojis, Embeds, XML-RPC
-- Remove Dashicons, Block CSS, Global Styles
+- Remove jQuery / jQuery Migrate
+- Remove Meta Generator & Version info
+
+**Performance:**
+- Defer JavaScript loading
+- Disable DNS Prefetch
+- Limit Heartbeat API
+
+**Assets & Styles:**
+- Disable Google Fonts
+- Remove Dashicons on frontend
+- Remove Query Strings from CSS/JS
+
+**WooCommerce:**
+- Disable Cart Fragments (AJAX)
+- Remove WC scripts on non-shop pages
+
+**Gutenberg:**
+- Disable Global Styles & Block CSS
+- Disable Duotone SVG filters
+
+**Page Builders:**
 - Smart Elementor asset loading
-- And more...
+
+**And 20+ more optimizations!**
 
 ### 🗄️ Database Optimization
 - Clean expired transients

@@ -114,6 +114,63 @@ class BloatRemovalService implements ServiceInterface
         if (!empty($this->options['optimize_elementor'])) {
             add_action('wp_enqueue_scripts', [$this, 'optimize_elementor_assets'], 100);
         }
+
+        // New optimizations
+        if (!empty($this->options['disable_dns_prefetch'])) {
+            remove_action('wp_head', 'wp_resource_hints', 2);
+        }
+
+        if (!empty($this->options['remove_jquery'])) {
+            add_action('wp_enqueue_scripts', [$this, 'remove_jquery'], 100);
+        }
+
+        if (!empty($this->options['disable_google_fonts'])) {
+            add_action('wp_enqueue_scripts', [$this, 'disable_google_fonts'], 100);
+        }
+
+        if (!empty($this->options['defer_javascript'])) {
+            add_filter('script_loader_tag', [$this, 'defer_scripts'], 10, 2);
+        }
+
+        if (!empty($this->options['disable_wc_cart_fragments'])) {
+            add_action('wp_enqueue_scripts', [$this, 'disable_wc_cart_fragments'], 100);
+        }
+
+        if (!empty($this->options['remove_wc_scripts_non_wc_pages'])) {
+            add_action('wp_enqueue_scripts', [$this, 'remove_wc_scripts_non_wc_pages'], 100);
+        }
+
+        if (!empty($this->options['disable_password_strength_meter'])) {
+            add_action('wp_print_scripts', [$this, 'disable_password_strength_meter'], 100);
+        }
+
+        if (!empty($this->options['limit_post_revisions_number']) && is_numeric($this->options['limit_post_revisions_number'])) {
+            add_filter('wp_revisions_to_keep', function() {
+                return intval($this->options['limit_post_revisions_number']);
+            });
+        }
+
+        if (!empty($this->options['remove_recent_comments_style'])) {
+            add_action('widgets_init', function() {
+                global $wp_widget_factory;
+                if (isset($wp_widget_factory->widgets['WP_Widget_Recent_Comments'])) {
+                    remove_action('wp_head', [$wp_widget_factory->widgets['WP_Widget_Recent_Comments'], 'recent_comments_style']);
+                }
+            });
+        }
+
+        if (!empty($this->options['disable_duotone_svg'])) {
+            remove_action('wp_body_open', 'wp_global_styles_render_svg_filters');
+        }
+
+        if (!empty($this->options['remove_wp_version'])) {
+            remove_action('wp_head', 'wp_generator');
+            add_filter('the_generator', '__return_empty_string');
+        }
+
+        if (!empty($this->options['disable_canonical'])) {
+            remove_action('wp_head', 'rel_canonical');
+        }
     }
 
     public function optimize_elementor_assets()
@@ -265,5 +322,117 @@ class BloatRemovalService implements ServiceInterface
     {
         $settings['interval'] = self::HEARTBEAT_INTERVAL;
         return $settings;
+    }
+
+    // ==================== NEW OPTIMIZATION METHODS ====================
+
+    public function remove_jquery()
+    {
+        if (!is_admin()) {
+            wp_deregister_script('jquery');
+            wp_deregister_script('jquery-core');
+            wp_deregister_script('jquery-migrate');
+        }
+    }
+
+    public function disable_google_fonts()
+    {
+        // Remove Google Fonts from wp_enqueue_scripts
+        global $wp_styles;
+        if (!isset($wp_styles->registered)) {
+            return;
+        }
+
+        foreach ($wp_styles->registered as $handle => $style) {
+            if (isset($style->src) && (strpos($style->src, 'fonts.googleapis.com') !== false || strpos($style->src, 'fonts.gstatic.com') !== false)) {
+                wp_dequeue_style($handle);
+                wp_deregister_style($handle);
+            }
+        }
+    }
+
+    public function defer_scripts($tag, $handle)
+    {
+        // Don't defer jQuery or admin scripts
+        if (is_admin() || strpos($handle, 'jquery') !== false) {
+            return $tag;
+        }
+
+        // Exclude scripts that shouldn't be deferred
+        $exclude = ['optimize-speed', 'partytown'];
+        foreach ($exclude as $excluded) {
+            if (strpos($handle, $excluded) !== false) {
+                return $tag;
+            }
+        }
+
+        // Add defer attribute
+        if (strpos($tag, 'defer') === false && strpos($tag, 'async') === false) {
+            $tag = str_replace(' src', ' defer src', $tag);
+        }
+
+        return $tag;
+    }
+
+    public function disable_wc_cart_fragments()
+    {
+        if (!class_exists('WooCommerce')) {
+            return;
+        }
+
+        wp_dequeue_script('wc-cart-fragments');
+        wp_deregister_script('wc-cart-fragments');
+
+        // Alternative: Increase interval instead of disabling
+        // add_filter('woocommerce_cart_fragment_refresh_interval', function() {
+        //     return 86400; // 24 hours
+        // });
+    }
+
+    public function remove_wc_scripts_non_wc_pages()
+    {
+        if (!class_exists('WooCommerce')) {
+            return;
+        }
+
+        // Only load on WooCommerce pages
+        if (is_woocommerce() || is_cart() || is_checkout() || is_account_page()) {
+            return;
+        }
+
+        // Dequeue WooCommerce scripts
+        wp_dequeue_style('woocommerce-general');
+        wp_dequeue_style('woocommerce-layout');
+        wp_dequeue_style('woocommerce-smallscreen');
+        wp_dequeue_style('woocommerce_frontend_styles');
+        wp_dequeue_style('woocommerce_fancybox_styles');
+        wp_dequeue_style('woocommerce_chosen_styles');
+        wp_dequeue_style('woocommerce_prettyPhoto_css');
+        
+        wp_dequeue_script('wc_price_slider');
+        wp_dequeue_script('wc-single-product');
+        wp_dequeue_script('wc-add-to-cart');
+        wp_dequeue_script('wc-checkout');
+        wp_dequeue_script('wc-add-to-cart-variation');
+        wp_dequeue_script('wc-single-product');
+        wp_dequeue_script('wc-cart');
+        wp_dequeue_script('wc-chosen');
+        wp_dequeue_script('woocommerce');
+        wp_dequeue_script('prettyPhoto');
+        wp_dequeue_script('prettyPhoto-init');
+        wp_dequeue_script('jquery-blockui');
+        wp_dequeue_script('jquery-placeholder');
+        wp_dequeue_script('fancybox');
+        wp_dequeue_script('jqueryui');
+    }
+
+    public function disable_password_strength_meter()
+    {
+        if (!is_admin()) {
+            wp_dequeue_script('zxcvbn-async');
+            wp_deregister_script('zxcvbn-async');
+            wp_dequeue_script('password-strength-meter');
+            wp_deregister_script('password-strength-meter');
+        }
     }
 }
