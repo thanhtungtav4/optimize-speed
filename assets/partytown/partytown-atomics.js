@@ -1,0 +1,2 @@
+/* Partytown 0.10.2 - Atomics Support */
+!function(t,e,s,i,n){function r(t){return t.replace(/\?.*$/,"")}function o(s,i,n){t._ptf=t._ptf||[],t._ptf.push({f:s,a:i,d:n}),e.dispatchEvent(new CustomEvent("pt0"))}var a="text/partytown",p=e.getElementsByTagName("script");for(n=0;n<p.length;n++)if((i=p[n]).type==a){var c=e.createElement("script");c.innerHTML=i.innerHTML,c.nonce=i.nonce,i.parentNode.replaceChild(c,i)}t.partytown=t.partytown||{},t.partytown.forward=t.partytown.forward||[],t.partytown.forward.forEach((function(t){var e=t.split(".");o(e,void 0,!1)}))}(window,document);

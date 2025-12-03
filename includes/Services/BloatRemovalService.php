@@ -1,0 +1,269 @@
+<?php
+
+namespace OptimizeSpeed\Services;
+
+use OptimizeSpeed\Core\ServiceInterface;
+
+class BloatRemovalService implements ServiceInterface
+{
+    private $options;
+
+    const HEARTBEAT_INTERVAL = 60; // seconds
+
+    public function register()
+    {
+        add_action('init', [$this, 'boot']);
+    }
+
+    public function boot()
+    {
+        $this->options = get_option('optimize_speed_settings', []);
+
+        if (!empty($this->options['disable_emojis']))
+            $this->disable_emojis();
+        if (!empty($this->options['disable_embeds']))
+            $this->disable_embeds();
+        if (!empty($this->options['disable_xmlrpc']))
+            add_filter('xmlrpc_enabled', '__return_false');
+
+        // Heartbeat
+        if (!empty($this->options['disable_heartbeat'])) {
+            add_action('init', [$this, 'disable_heartbeat'], 1);
+        } elseif (!empty($this->options['limit_heartbeat'])) {
+            add_filter('heartbeat_settings', [$this, 'limit_heartbeat']);
+        }
+
+        if (!empty($this->options['disable_jquery_migrate']))
+            add_action('wp_default_scripts', [$this, 'disable_jquery_migrate']);
+        if (!empty($this->options['disable_widget_blocks']))
+            remove_action('init', 'wp_widgets_init', 1); // This might be too aggressive, usually remove_theme_support('widgets-block-editor')
+        if (!empty($this->options['disable_widget_blocks']))
+            add_action('after_setup_theme', function () {
+                remove_theme_support('widgets-block-editor');
+            });
+
+        if (!empty($this->options['remove_meta_generator']))
+            remove_action('wp_head', 'wp_generator');
+        if (!empty($this->options['remove_wlwmanifest']))
+            remove_action('wp_head', 'wlwmanifest_link');
+        if (!empty($this->options['remove_shortlink'])) {
+            remove_action('wp_head', 'wp_shortlink_wp_head');
+            remove_action('template_redirect', 'wp_shortlink_header', 11);
+        }
+
+        if (!empty($this->options['remove_rss_feed_links'])) {
+            remove_action('wp_head', 'feed_links', 2);
+            remove_action('wp_head', 'feed_links_extra', 3);
+        }
+
+        if (!empty($this->options['disable_rss_feeds']))
+            $this->disable_rss_feeds();
+        if (!empty($this->options['remove_rss_generator'])) {
+            add_filter('the_generator', '__return_empty_string');
+        }
+
+        if (!empty($this->options['disable_post_revisions']))
+            add_filter('wp_revisions_to_keep', '__return_zero');
+        if (!empty($this->options['disable_app_passwords']))
+            add_filter('wp_is_application_passwords_available', '__return_false');
+
+        if (!empty($this->options['disable_rest_api'])) {
+            add_filter('rest_authentication_errors', [$this, 'disable_rest_api_logic']);
+        }
+
+        if (!empty($this->options['remove_rsd_link']))
+            remove_action('wp_head', 'rsd_link');
+        if (!empty($this->options['remove_rest_api_link'])) {
+            remove_action('wp_head', 'rest_output_link_wp_head', 10);
+            remove_action('wp_head', 'wp_oembed_add_discovery_links', 10);
+            remove_action('template_redirect', 'rest_output_link_header', 11, 0);
+        }
+        if (!empty($this->options['remove_query_strings'])) {
+            add_filter('style_loader_src', [$this, 'remove_query_strings'], 10, 2);
+            add_filter('script_loader_src', [$this, 'remove_query_strings'], 10, 2);
+        }
+        if (!empty($this->options['disable_self_pingbacks']))
+            add_action('pre_ping', [$this, 'disable_self_pingbacks']);
+        if (!empty($this->options['remove_dashicons']))
+            add_action('wp_enqueue_scripts', [$this, 'remove_dashicons'], 100);
+        if (!empty($this->options['disable_gravatars']))
+            add_filter('get_avatar', '__return_false');
+        if (!empty($this->options['disable_comments'])) {
+            add_action('admin_init', [$this, 'disable_comments_admin']);
+            add_filter('comments_open', '__return_false', 20, 2);
+            add_filter('pings_open', '__return_false', 20, 2);
+            add_filter('comments_array', '__return_empty_array', 10, 2);
+            add_action('admin_menu', function () {
+                remove_menu_page('edit-comments.php');
+            });
+        }
+
+        if (!empty($this->options['disable_global_styles'])) {
+            remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
+            remove_action('wp_body_open', 'wp_global_styles_render_svg_filters');
+        }
+
+        if (!empty($this->options['disable_block_library'])) {
+            add_action('wp_enqueue_scripts', function () {
+                wp_dequeue_style('wp-block-library');
+                wp_dequeue_style('wp-block-library-theme');
+                wp_dequeue_style('wc-block-style'); // WooCommerce blocks
+            }, 100);
+        }
+
+        if (!empty($this->options['optimize_elementor'])) {
+            add_action('wp_enqueue_scripts', [$this, 'optimize_elementor_assets'], 100);
+        }
+    }
+
+    public function optimize_elementor_assets()
+    {
+        if (!class_exists('\Elementor\Plugin'))
+            return;
+
+        $post_id = get_the_ID();
+
+        // If it's not a singular post/page, or if it IS built with Elementor, do nothing (let assets load)
+        if (!is_singular() || \Elementor\Plugin::$instance->db->is_built_with_elementor($post_id)) {
+            return;
+        }
+
+        // Dequeue Elementor assets
+        wp_dequeue_style('elementor-frontend');
+        wp_dequeue_script('elementor-frontend');
+        wp_dequeue_style('elementor-icons');
+        wp_dequeue_style('elementor-global');
+        // Note: This might break Header/Footer if built with Elementor Pro but applied to non-Elementor pages.
+        // Users should be warned.
+    }
+
+    public function remove_query_strings($src)
+    {
+        if (strpos($src, '?ver=') !== false)
+            $src = remove_query_arg('ver', $src);
+        return $src;
+    }
+
+    public function disable_self_pingbacks(&$links)
+    {
+        $home = get_option('home');
+        foreach ($links as $l => $link)
+            if (0 === strpos($link, $home))
+                unset($links[$l]);
+    }
+
+    public function remove_dashicons()
+    {
+        if (!is_admin_bar_showing() && !is_customize_preview()) {
+            wp_dequeue_style('dashicons');
+        }
+    }
+
+    public function disable_comments_admin()
+    {
+        $post_types = get_post_types();
+        foreach ($post_types as $post_type) {
+            if (post_type_supports($post_type, 'comments')) {
+                remove_post_type_support($post_type, 'comments');
+                remove_post_type_support($post_type, 'trackbacks');
+            }
+        }
+    }
+
+    public function disable_jquery_migrate($scripts)
+    {
+        if (!is_admin() && isset($scripts->registered['jquery'])) {
+            $script = $scripts->registered['jquery'];
+            if ($script->deps) {
+                $script->deps = array_diff($script->deps, ['jquery-migrate']);
+            }
+        }
+    }
+
+    public function disable_heartbeat()
+    {
+        wp_deregister_script('heartbeat');
+    }
+
+    public function disable_rss_feeds()
+    {
+        add_action('do_feed', [$this, 'disable_feed'], 1);
+        add_action('do_feed_rdf', [$this, 'disable_feed'], 1);
+        add_action('do_feed_rss', [$this, 'disable_feed'], 1);
+        add_action('do_feed_rss2', [$this, 'disable_feed'], 1);
+        add_action('do_feed_atom', [$this, 'disable_feed'], 1);
+        add_action('do_feed_rss2_comments', [$this, 'disable_feed'], 1);
+        add_action('do_feed_atom_comments', [$this, 'disable_feed'], 1);
+    }
+
+    public function disable_feed()
+    {
+        wp_die(__('No feed available, please visit the <a href="' . esc_url(home_url('/')) . '">homepage</a>!'));
+    }
+
+    public function disable_rest_api_logic($result)
+    {
+        if (!empty($result)) {
+            return $result;
+        }
+        if (!is_user_logged_in()) {
+            return new \WP_Error('rest_not_logged_in', 'You are not currently logged in.', ['status' => 401]);
+        }
+        return $result;
+    }
+
+
+    private function disable_emojis()
+    {
+        remove_action('wp_head', 'print_emoji_detection_script', 7);
+        remove_action('admin_print_scripts', 'print_emoji_detection_script');
+        remove_action('wp_print_styles', 'print_emoji_styles');
+        remove_action('admin_print_styles', 'print_emoji_styles');
+        remove_filter('the_content_feed', 'wp_staticize_emoji');
+        remove_filter('comment_text_rss', 'wp_staticize_emoji');
+        remove_filter('wp_mail', 'wp_staticize_emoji_for_email');
+        add_filter('tiny_mce_plugins', function ($plugins) {
+            if (is_array($plugins)) {
+                return array_diff($plugins, ['wpemoji']);
+            }
+            return [];
+        });
+        add_filter('wp_resource_hints', function ($urls, $relation_type) {
+            if ('dns-prefetch' === $relation_type) {
+                $emoji_svg_url = 'https://s.w.org/images/core/emoji/';
+                foreach ($urls as $key => $url) {
+                    if (strpos($url, $emoji_svg_url) !== false) {
+                        unset($urls[$key]);
+                    }
+                }
+            }
+            return $urls;
+        }, 10, 2);
+    }
+
+    private function disable_embeds()
+    {
+        remove_action('rest_api_init', 'wp_oembed_register_route');
+        add_filter('embed_oembed_discover', '__return_false');
+        remove_filter('oembed_dataparse', 'wp_filter_oembed_result', 10);
+        remove_action('wp_head', 'wp_oembed_add_discovery_links');
+        remove_action('wp_head', 'wp_oembed_add_host_js');
+        add_filter('tiny_mce_plugins', function ($plugins) {
+            return array_diff($plugins, ['wpembed']);
+        });
+        add_filter('rewrite_rules_array', function ($rules) {
+            foreach ($rules as $rule => $rewrite) {
+                if (false !== strpos($rewrite, 'embed=true')) {
+                    unset($rules[$rule]);
+                }
+            }
+            return $rules;
+        });
+    }
+
+    public function limit_heartbeat($settings)
+    {
+        $settings['interval'] = self::HEARTBEAT_INTERVAL;
+        return $settings;
+    }
+}

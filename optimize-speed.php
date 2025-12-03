@@ -3,13 +3,18 @@
  * Plugin Name: Optimize Speed
  * Description: All-in-one speed optimization: Partytown integration and Native Image Optimization (WebP/AVIF/Lazy Load).
  * Version: 1.0.0
- * Author: Antigravity
+ * Author: Dev Team
+ * Author URI: https://nttung.dev
  * Text Domain: optimize-speed
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+define('OPTIMIZE_SPEED_VERSION', '1.0.0');
+define('OPTIMIZE_SPEED_DIR', plugin_dir_path(__FILE__));
+define('OPTIMIZE_SPEED_URL', plugin_dir_url(__FILE__));
 
 // Autoloader
 spl_autoload_register(function ($class) {
@@ -29,10 +34,13 @@ spl_autoload_register(function ($class) {
     }
 });
 
+// Use statements for services
 use OptimizeSpeed\Core\Plugin;
 use OptimizeSpeed\Services\AdminService;
 use OptimizeSpeed\Services\PartytownService;
 use OptimizeSpeed\Services\ImageOptimizationService;
+use OptimizeSpeed\Services\BloatRemovalService;
+use OptimizeSpeed\Services\DatabaseOptimizationService;
 
 function optimize_speed_init()
 {
@@ -42,6 +50,8 @@ function optimize_speed_init()
     $plugin->register_service(new AdminService());
     $plugin->register_service(new PartytownService());
     $plugin->register_service(new ImageOptimizationService());
+    $plugin->register_service(new BloatRemovalService());
+    $plugin->register_service(new DatabaseOptimizationService());
 
     // Run Plugin
     $plugin->run();
