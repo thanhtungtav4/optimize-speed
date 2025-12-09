@@ -74,79 +74,84 @@ class ImageOptimizationService implements ServiceInterface
 
     private function create_webp($file)
     {
-        if (!is_readable($file) || filesize($file) < 5000 || !preg_match('/\.(jpe?g|png)$/i', $file))
+        if (!preg_match('/\.(jpe?g|png)$/i', $file))
             return;
-        $out = preg_replace('/\.(jpe?g|png)$/i', '.webp', $file);
-
-        if (file_exists($out)) {
-            if (filesize($out) > 300)
-                return;
-            @unlink($out);
-        }
-
-        if (class_exists('Imagick')) {
-            try {
-                $img = new Imagick($file);
-                $img->setImageFormat('webp');
-                $img->setOption('webp:quality', '75');
-                $img->writeImage($out);
-                $img->clear();
-                $img->destroy();
-            } catch (Exception $e) { /* silent */
-            }
-        } elseif (function_exists('imagewebp')) {
-            $gd = @imagecreatefromstring(@file_get_contents($file));
-            if ($gd) {
-                if (function_exists('imagepalettetotruecolor'))
-                    @imagepalettetotruecolor($gd);
-                @imagealphablending($gd, true);
-                @imagesavealpha($gd, true);
-                @imagewebp($gd, $out, 82);
-                @imagedestroy($gd);
-            }
-        }
+        $this->convert_image($file, 'webp', 82);
     }
 
     private function create_avif($file)
     {
-        if (!is_readable($file) || filesize($file) < 5000 || !preg_match('/\.(jpe?g|png)$/i', $file))
+        if (!$this->can_create_avif() || !preg_match('/\.(jpe?g|png)$/i', $file))
             return;
-        if (!$this->can_create_avif())
+        $this->convert_image($file, 'avif', 40);
+    }
+
+    private function convert_image($file, $format, $quality)
+    {
+        if (!is_readable($file) || filesize($file) < 5000)
             return;
 
-        $out = preg_replace('/\.(jpe?g|png)$/i', '.avif', $file);
+        $out = preg_replace('/\.(jpe?g|png)$/i', '.' . $format, $file);
+        $min_size = ($format === 'avif') ? 200 : 300;
 
+        // Skip if already optimized and large enough
         if (file_exists($out)) {
-            if (filesize($out) > 200)
+            if (filesize($out) > $min_size)
                 return;
             @unlink($out);
         }
 
-        try {
-            $img = new Imagick($file);
-            $img->setImageFormat('avif');
-            $img->setOption('avif:lossless', 'false');
-            $img->setImageCompressionQuality(40);
-            $img->setOption('avif:speed', '8');
+        $tmp = $out . '.tmp';
+        // Remove stale tmp file
+        if (file_exists($tmp)) {
+            @unlink($tmp);
+        }
 
-            if (method_exists($img, 'stripImage')) {
-                $img->stripImage();
-            } elseif (method_exists($img, 'strip')) {
-                $img->strip();
+        try {
+            if ($format === 'avif' || class_exists('Imagick')) {
+                // Use Imagick for AVIF or if WebP requests it
+                $img = new Imagick($file);
+                $img->setImageFormat($format);
+
+                if ($format === 'avif') {
+                    $img->setOption('avif:lossless', 'false');
+                    $img->setOption('avif:speed', '8');
+                    $img->setImageCompressionQuality($quality);
+                } else {
+                    $img->setOption('webp:quality', (string) $quality);
+                }
+
+                if (method_exists($img, 'stripImage')) {
+                    $img->stripImage();
+                } elseif (method_exists($img, 'strip')) {
+                    $img->strip();
+                }
+
+                $img->writeImage($tmp);
+                $img->clear();
+                $img->destroy();
+            } elseif ($format === 'webp' && function_exists('imagewebp')) {
+                // Fallback GD for WebP
+                $gd = @imagecreatefromstring(@file_get_contents($file));
+                if ($gd) {
+                    if (function_exists('imagepalettetotruecolor'))
+                        @imagepalettetotruecolor($gd);
+                    @imagealphablending($gd, true);
+                    @imagesavealpha($gd, true);
+                    @imagewebp($gd, $tmp, $quality);
+                    @imagedestroy($gd);
+                }
             }
 
-            $img->writeImage($out);
-            $img->clear();
-            $img->destroy();
-
-            clearstatcache(true, $out);
-            if (file_exists($out) && filesize($out) < 100) {
-                @unlink($out);
+            // Atomic Rename
+            clearstatcache(true, $tmp);
+            if (file_exists($tmp) && filesize($tmp) > 100) {
+                @rename($tmp, $out);
+            } else {
+                @unlink($tmp);
             }
         } catch (Exception $e) {
-            if (file_exists($out)) {
-                @unlink($out);
-            }
+            @unlink($tmp);
         }
     }
 
@@ -450,7 +455,7 @@ class ImageOptimizationService implements ServiceInterface
         $deleted = 0;
         $errors = 0;
         $total_freed = 0;
-        
+
         if (!is_dir($base_dir)) {
             wp_send_json_error('Uploads directory not found');
         }
@@ -459,18 +464,28 @@ class ImageOptimizationService implements ServiceInterface
             $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base_dir, RecursiveDirectoryIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
             foreach ($iterator as $file) {
                 try {
-                    if ($file->isFile() && strtolower($file->getExtension()) === 'avif') {
+                    if ($file->isFile()) {
+                        $ext = strtolower($file->getExtension());
                         $path = $file->getPathname();
-                        clearstatcache(true, $path);
-                        $size = $file->getSize();
-                        
-                        // Delete if 0 bytes or very small (< 100 bytes is essentially empty for AVIF)
-                        if ($size < 100) {
-                            if (@unlink($path)) {
-                                $deleted++;
-                                $total_freed += $size;
-                            } else {
-                                $errors++;
+
+                        // Cleanup tmp files
+                        if ($ext === 'tmp' && (strpos($path, '.avif.tmp') !== false || strpos($path, '.webp.tmp') !== false)) {
+                            @unlink($path);
+                            continue;
+                        }
+
+                        if ($ext === 'avif') {
+                            clearstatcache(true, $path);
+                            $size = $file->getSize();
+
+                            // Delete if 0 bytes or very small (< 100 bytes is essentially empty for AVIF)
+                            if ($size < 100) {
+                                if (@unlink($path)) {
+                                    $deleted++;
+                                    $total_freed += $size;
+                                } else {
+                                    $errors++;
+                                }
                             }
                         }
                     }
