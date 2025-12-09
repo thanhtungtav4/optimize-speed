@@ -37,6 +37,20 @@ class ImageOptimizationService implements ServiceInterface
         add_action('loop_start', function () {
             self::$is_first_image = true;
         });
+        // Enqueue Assets
+        // Enqueue Assets
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
+    }
+
+    public function enqueue_assets()
+    {
+        $options = get_option('optimize_speed_settings', []);
+        $mode = isset($options['image_opt_mode']) ? $options['image_opt_mode'] : 'native';
+
+        if ($mode === 'lqip') {
+            wp_enqueue_script('optimize-speed-lqip', plugins_url('assets/js/lqip.js', dirname(dirname(__FILE__))), [], '1.0', true);
+            wp_add_inline_style('wp-block-library', '.opti-lqip { filter: blur(10px); transition: filter 0.4s ease-out; }');
+        }
     }
 
     public function boot()
@@ -121,10 +135,14 @@ class ImageOptimizationService implements ServiceInterface
                     $img->setOption('webp:quality', (string) $quality);
                 }
 
-                if (method_exists($img, 'stripImage')) {
-                    $img->stripImage();
-                } elseif (method_exists($img, 'strip')) {
-                    $img->strip();
+                try {
+                    if (method_exists($img, 'stripImage')) {
+                        $img->stripImage();
+                    } elseif (method_exists($img, 'strip')) {
+                        $img->strip();
+                    }
+                } catch (\Exception $e) {
+                    // Ignore strip errors
                 }
 
                 $img->writeImage($tmp);
@@ -138,20 +156,35 @@ class ImageOptimizationService implements ServiceInterface
                         @imagepalettetotruecolor($gd);
                     @imagealphablending($gd, true);
                     @imagesavealpha($gd, true);
-                    @imagewebp($gd, $tmp, $quality);
+                    if (!@imagewebp($gd, $tmp, $quality)) {
+                        error_log("Optimize Speed: GD failed to save WebP to $tmp");
+                    }
                     @imagedestroy($gd);
+                } else {
+                    error_log("Optimize Speed: GD failed to load image $file");
                 }
             }
 
             // Atomic Rename
             clearstatcache(true, $tmp);
             if (file_exists($tmp) && filesize($tmp) > 100) {
-                @rename($tmp, $out);
+                if (!@rename($tmp, $out)) {
+                    $error = error_get_last();
+                    error_log("Optimize Speed: Failed to rename $tmp to $out. Error: " . ($error['message'] ?? 'Unknown'));
+                    @unlink($tmp);
+                }
             } else {
-                @unlink($tmp);
+                if (file_exists($tmp)) {
+                    @unlink($tmp);
+                    error_log("Optimize Speed: Generated file too small ($tmp)");
+                } else {
+                    error_log("Optimize Speed: Optimize failed, temp file not created ($tmp)");
+                }
             }
         } catch (Exception $e) {
-            @unlink($tmp);
+            error_log("Optimize Speed: Exception during conversion of $file to $format. Error: " . $e->getMessage());
+            if (file_exists($tmp))
+                @unlink($tmp);
         }
     }
 
@@ -239,17 +272,18 @@ class ImageOptimizationService implements ServiceInterface
         $html = '<picture class="optimize-picture">';
 
         // AVIF
+        // AVIF
         $avif_url = null;
-        if (file_exists($avif)) {
+        if (file_exists($avif) && filesize($avif) > 100) {
             $avif_url = str_replace($upload['basedir'], $upload['baseurl'], $avif);
         } else {
             $original_avif = $original_dir . '/' . $original_name . '.avif';
-            if (file_exists($original_avif)) {
+            if (file_exists($original_avif) && filesize($original_avif) > 100) {
                 $avif_url = str_replace($upload['basedir'], $upload['baseurl'], $original_avif);
             } elseif (!$this->weak_server_mode && $this->can_create_avif() && !isset(self::$generated_files[$original_avif])) {
                 $this->create_avif($original_file);
                 self::$generated_files[$original_avif] = true;
-                if (file_exists($original_avif)) {
+                if (file_exists($original_avif) && filesize($original_avif) > 100) {
                     $avif_url = str_replace($upload['basedir'], $upload['baseurl'], $original_avif);
                 }
             }
@@ -259,16 +293,16 @@ class ImageOptimizationService implements ServiceInterface
 
         // WebP
         $webp_url = null;
-        if (file_exists($webp)) {
+        if (file_exists($webp) && filesize($webp) > 100) {
             $webp_url = str_replace($upload['basedir'], $upload['baseurl'], $webp);
         } else {
             $original_webp = $original_dir . '/' . $original_name . '.webp';
-            if (file_exists($original_webp)) {
+            if (file_exists($original_webp) && filesize($original_webp) > 100) {
                 $webp_url = str_replace($upload['basedir'], $upload['baseurl'], $original_webp);
             } elseif (!$this->weak_server_mode && !isset(self::$generated_files[$original_webp])) {
                 $this->create_webp($original_file);
                 self::$generated_files[$original_webp] = true;
-                if (file_exists($original_webp)) {
+                if (file_exists($original_webp) && filesize($original_webp) > 100) {
                     $webp_url = str_replace($upload['basedir'], $upload['baseurl'], $original_webp);
                 }
             }
@@ -285,6 +319,14 @@ class ImageOptimizationService implements ServiceInterface
     {
         if (is_admin() || $icon)
             return $html;
+
+        $options = get_option('optimize_speed_settings', []);
+        $mode = isset($options['image_opt_mode']) ? $options['image_opt_mode'] : 'native';
+
+        if ($mode === 'lqip') {
+            return $this->render_lqip($id, $size) ?: $html;
+        }
+
         return $this->build_picture($id, $size) ?: $html;
     }
 
@@ -353,7 +395,14 @@ class ImageOptimizationService implements ServiceInterface
             $size = $this->best_size($id, (int) $w[1], (int) $h[1]);
         }
 
-        $picture = $this->build_picture($id, $size);
+        $options = get_option('optimize_speed_settings', []);
+        $mode = isset($options['image_opt_mode']) ? $options['image_opt_mode'] : 'native';
+
+        if ($mode === 'lqip') {
+            $picture = $this->render_lqip($id, $size);
+        } else {
+            $picture = $this->build_picture($id, $size);
+        }
         if (!$picture)
             return $img_tag;
 
@@ -401,6 +450,82 @@ class ImageOptimizationService implements ServiceInterface
         }
         return self::$best_size_cache[$key] = $best;
     }
+
+    // ====================== LQIP MODE ======================
+    private function render_lqip($id, $size)
+    {
+        $src = wp_get_attachment_image_src($id, $size);
+        if (!$src)
+            return false;
+        list($url, $w, $h) = $src;
+
+        $alt = get_post_meta($id, '_wp_attachment_image_alt', true) ?: '';
+        $srcset = wp_get_attachment_image_srcset($id, $size);
+        $sizes = wp_get_attachment_image_sizes($id, $size);
+
+        $base64 = $this->get_base64_placeholder($id);
+
+        // If we can't get a placeholder, fallback to native picture
+        if (!$base64)
+            return $this->build_picture($id, $size);
+
+        $is_lcp = self::$is_first_image;
+        if ($is_lcp) {
+            self::$is_first_image = false;
+            // Don't blur LCP image to avoid CLS or delay
+            return $this->build_picture($id, $size);
+        }
+
+        // LQIP Structure
+        $classes = 'opti-lqip';
+        $attrs = 'src="' . esc_attr($base64) . '" ';
+        $attrs .= 'data-src="' . esc_url($url) . '" ';
+        if ($srcset)
+            $attrs .= 'data-srcset="' . esc_attr($srcset) . '" ';
+        if ($sizes)
+            $attrs .= 'data-sizes="' . esc_attr($sizes) . '" ';
+        $attrs .= 'alt="' . esc_attr($alt) . '" ';
+        $attrs .= 'width="' . (int) $w . '" height="' . (int) $h . '" ';
+        $attrs .= 'class="' . $classes . '" ';
+        $attrs .= 'loading="lazy" decoding="async"';
+
+        // Include noscript fallback for SEO/No-JS
+        $noscript = '<noscript><img src="' . esc_url($url) . '" alt="' . esc_attr($alt) . '" width="' . (int) $w . '" height="' . (int) $h . '" loading="lazy"></noscript>';
+
+        return '<img ' . $attrs . '>' . $noscript;
+    }
+
+    private function get_base64_placeholder($id)
+    {
+        $cached = get_post_meta($id, '_opti_lqip_base64', true);
+        if ($cached)
+            return $cached;
+
+        $file = get_attached_file($id);
+        if (!$file || !file_exists($file))
+            return false;
+
+        // Create small thumbnail (20px width)
+        $editor = wp_get_image_editor($file);
+        if (is_wp_error($editor))
+            return false;
+
+        $editor->resize(20, 20, false);
+
+        // Save to stream/buffer
+        ob_start();
+        $editor->save(null, 'image/jpeg');
+        $content = ob_get_clean();
+
+        if (!$content)
+            return false;
+
+        $base64 = 'data:image/jpeg;base64,' . base64_encode($content);
+        update_post_meta($id, '_opti_lqip_base64', $base64);
+
+        return $base64;
+    }
+
 
     // ====================== AJAX HANDLERS ======================
     public function ajax_get_queue()

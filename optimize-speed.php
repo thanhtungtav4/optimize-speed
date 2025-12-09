@@ -15,6 +15,7 @@ if (!defined('ABSPATH')) {
 define('OPTIMIZE_SPEED_VERSION', '1.0.0');
 define('OPTIMIZE_SPEED_DIR', plugin_dir_path(__FILE__));
 define('OPTIMIZE_SPEED_URL', plugin_dir_url(__FILE__));
+define('PARTYTOWN_VERSION', '0.10.2');
 
 // Autoloader
 spl_autoload_register(function ($class) {

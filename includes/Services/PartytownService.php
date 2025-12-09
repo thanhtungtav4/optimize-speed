@@ -98,23 +98,20 @@ class PartytownService implements ServiceInterface
     private function get_forward_events()
     {
         $fwd = ['dataLayer.push'];
+        $config = $this->get_integrations_config();
 
-        // Support both old field names (with _id) and new field names (without _id)
-        if (!empty($this->options['gtm']) || !empty($this->options['gtm_id']))
-            $fwd[] = 'dataLayer.push';
-        if (!empty($this->options['gtag']) || !empty($this->options['ga4_id']))
-            $fwd[] = 'gtag';
-        if (!empty($this->options['fbpixel']) || !empty($this->options['fb_pixel_id']))
-            $fwd[] = 'fbq';
-        if (!empty($this->options['matomo']) || !empty($this->options['matomo_site_id']))
-            $fwd[] = '_paq.push';
-        if (!empty($this->options['clarity']) || !empty($this->options['clarity_id']))
-            $fwd[] = 'clarity';
-        if (!empty($this->options['tiktok']) || !empty($this->options['tiktok_pixel_id'])) {
-            $fwd[] = 'ttq.load';
-            $fwd[] = 'ttq.track';
-            $fwd[] = 'ttq.page';
-            $fwd[] = 'ttq.instance';
+        foreach ($config as $integration) {
+            $has_integration = false;
+            foreach ($integration['keys'] as $key) {
+                if (!empty($this->options[$key])) {
+                    $has_integration = true;
+                    break;
+                }
+            }
+
+            if ($has_integration) {
+                $fwd = array_merge($fwd, $integration['forward']);
+            }
         }
 
         return apply_filters('optimize_speed_partytown_forward_events', array_unique($fwd));
@@ -122,156 +119,178 @@ class PartytownService implements ServiceInterface
 
     public function print_all_partytown_scripts()
     {
-        // Check if any tracking ID is configured
-        $has_tracking = !empty($this->options['gtm']) || !empty($this->options['gtag']) ||
-            !empty($this->options['fbpixel']) || !empty($this->options['tiktok']) ||
-            !empty($this->options['clarity']) || !empty($this->options['matomo']);
-
-        if (!$has_tracking) {
-            return; // No tracking configured
-        }
-
-        // External scripts that need to be loaded (with type="text/partytown")
-        $external_scripts = [];
-
-        // Google Tag Manager
-        $gtm_id = $this->options['gtm'] ?? $this->options['gtm_id'] ?? '';
-        if (!empty($gtm_id)) {
-            $gtm_id = esc_js($gtm_id);
-            $external_scripts[] = "<script type=\"text/partytown\" src=\"https://www.googletagmanager.com/gtm.js?id={$gtm_id}\"></script>";
-        }
-
-        // Google Analytics 4 (gtag.js)
-        $ga4_id = $this->options['gtag'] ?? $this->options['ga4_id'] ?? '';
-        if (!empty($ga4_id)) {
-            $ga4_id = esc_js($ga4_id);
-            $external_scripts[] = "<script type=\"text/partytown\" src=\"https://www.googletagmanager.com/gtag/js?id={$ga4_id}\"></script>";
-        }
-
-        // Facebook Pixel
-        $fb_id = $this->options['fbpixel'] ?? $this->options['fb_pixel_id'] ?? '';
-        if (!empty($fb_id)) {
-            $external_scripts[] = "<script type=\"text/partytown\" src=\"https://connect.facebook.net/en_US/fbevents.js\"></script>";
-        }
-
-        // TikTok Pixel
-        $tiktok_id = $this->options['tiktok'] ?? $this->options['tiktok_pixel_id'] ?? '';
-        if (!empty($tiktok_id)) {
-            $external_scripts[] = "<script type=\"text/partytown\" src=\"https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=C6RGGFS2I7N4QUB43OL0&lib={$tiktok_id}\"></script>";
-        }
-
-        // Microsoft Clarity
-        $clarity_id = $this->options['clarity'] ?? $this->options['clarity_id'] ?? '';
-        if (!empty($clarity_id)) {
-            $clarity_id = esc_js($clarity_id);
-            $external_scripts[] = "<script type=\"text/partytown\" src=\"https://www.clarity.ms/tag/{$clarity_id}\"></script>";
-        }
-
-        // Output external scripts
-        if (!empty($external_scripts)) {
-            echo implode(PHP_EOL, $external_scripts) . PHP_EOL;
-        }
-
-        // Inline initialization scripts
-        $output = '<script type="text/partytown">' . PHP_EOL;
-
-        // GTM DataLayer
-        if (!empty($gtm_id)) {
-            $output .= "window.dataLayer = window.dataLayer || []; dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});" . PHP_EOL;
-        }
-
-        // GA4 init
-        if (!empty($ga4_id)) {
-            $output .= "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '{$ga4_id}');" . PHP_EOL;
-        }
-
-        // Facebook Pixel init
-        if (!empty($fb_id)) {
-            $fb_id = esc_js($fb_id);
-            $output .= "!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js'); fbq('init', '{$fb_id}'); fbq('track', 'PageView');" . PHP_EOL;
-        }
-
-        // TikTok Pixel init
-        if (!empty($tiktok_id)) {
-            $tiktok_id = esc_js($tiktok_id);
-            $output .= "!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};};}(window,document,'ttq'); ttq.load('{$tiktok_id}'); ttq.page();" . PHP_EOL;
-        }
-
-        // Matomo
-        $matomo_id = $this->options['matomo'] ?? $this->options['matomo_site_id'] ?? '';
-        $matomo_url = $this->options['matomo_url'] ?? '';
-        if (!empty($matomo_id) && !empty($matomo_url)) {
-            $matomo_id = intval($matomo_id);
-            $matomo_url = esc_url_raw(rtrim($matomo_url, '/'));
-            $output .= "var _paq = window._paq = window._paq || []; _paq.push(['trackPageView']); _paq.push(['enableLinkTracking']); _paq.push(['setTrackerUrl', '{$matomo_url}/matomo.php']); _paq.push(['setSiteId', '{$matomo_id}']);" . PHP_EOL;
-        }
-
-        // Microsoft Clarity init
-        if (!empty($clarity_id)) {
-            $output .= "(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};})(window,document,'clarity','script','{$clarity_id}');" . PHP_EOL;
-        }
-
-        $output .= '</script>';
-
-        // Only output if we have actual content
-        if (strlen($output) > 100) {
-            echo $output . PHP_EOL;
-        }
-    }
-
-    private function print_fallback_scripts()
-    {
+        $config = $this->get_integrations_config();
         $scripts = [];
+        $inline_inits = [];
 
-        // Google Tag Manager
-        $gtm_id = $this->options['gtm'] ?? $this->options['gtm_id'] ?? '';
-        if (!empty($gtm_id)) {
-            $gtm_id = esc_attr($gtm_id);
-            $scripts[] = "<script async src='https://www.googletagmanager.com/gtm.js?id={$gtm_id}'></script>";
-            $scripts[] = "<script>window.dataLayer=window.dataLayer||[];dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});</script>";
+        foreach ($config as $integration) {
+            $id = '';
+            foreach ($integration['keys'] as $key) {
+                if (!empty($this->options[$key])) {
+                    $id = $this->options[$key];
+                    break;
+                }
+            }
+
+            if ($id) {
+                // If extra options needed (like matomo_url), pass options
+                $script_data = $integration['partytown']($id, $this->options);
+
+                if (!empty($script_data['external'])) {
+                    $scripts[] = '<script type="text/partytown" src="' . esc_url($script_data['external']) . '"></script>';
+                }
+
+                if (!empty($script_data['inline'])) {
+                    $inline_inits[] = $script_data['inline'];
+                }
+            }
         }
 
-        // Google Analytics 4
-        $ga4_id = $this->options['gtag'] ?? $this->options['ga4_id'] ?? '';
-        if (!empty($ga4_id)) {
-            $ga4_id_attr = esc_attr($ga4_id);
-            $ga4_id_js = esc_js($ga4_id);
-            $scripts[] = "<script async src='https://www.googletagmanager.com/gtag/js?id={$ga4_id_attr}'></script>";
-            $scripts[] = "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{$ga4_id_js}');</script>";
-        }
-
-        // Facebook Pixel
-        $fb_id = $this->options['fbpixel'] ?? $this->options['fb_pixel_id'] ?? '';
-        if (!empty($fb_id)) {
-            $fb_id = esc_js($fb_id);
-            $scripts[] = "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','{$fb_id}');fbq('track','PageView');</script>";
-        }
-
-        // TikTok Pixel
-        $tiktok_id = $this->options['tiktok'] ?? $this->options['tiktok_pixel_id'] ?? '';
-        if (!empty($tiktok_id)) {
-            $tiktok_id = esc_js($tiktok_id);
-            $scripts[] = "<script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};};}(window,document,'ttq');ttq.load('{$tiktok_id}');ttq.page();</script>";
-        }
-
-        // Microsoft Clarity
-        $clarity_id = $this->options['clarity'] ?? $this->options['clarity_id'] ?? '';
-        if (!empty($clarity_id)) {
-            $clarity_id = esc_js($clarity_id);
-            $scripts[] = "<script>(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,'clarity','script','{$clarity_id}');</script>";
-        }
-
-        // Matomo
-        $matomo_id = $this->options['matomo'] ?? $this->options['matomo_site_id'] ?? '';
-        $matomo_url = $this->options['matomo_url'] ?? '';
-        if (!empty($matomo_id) && !empty($matomo_url)) {
-            $matomo_id = intval($matomo_id);
-            $matomo_url = esc_url(rtrim($matomo_url, '/'));
-            $scripts[] = "<script>var _paq=window._paq=window._paq||[];_paq.push(['trackPageView']);_paq.push(['enableLinkTracking']);(function(){var u='{$matomo_url}/';_paq.push(['setTrackerUrl',u+'matomo.php']);_paq.push(['setSiteId','{$matomo_id}']);var d=document,g=d.createElement('script'),s=d.getElementsByTagName('script')[0];g.async=true;g.src=u+'matomo.js';s.parentNode.insertBefore(g,s);})();</script>";
+        if (empty($scripts) && empty($inline_inits)) {
+            return;
         }
 
         if (!empty($scripts)) {
             echo implode(PHP_EOL, $scripts) . PHP_EOL;
         }
+
+        if (!empty($inline_inits)) {
+            echo '<script type="text/partytown">' . PHP_EOL;
+            echo implode(PHP_EOL, $inline_inits) . PHP_EOL;
+            echo '</script>';
+        }
+    }
+
+    private function print_fallback_scripts()
+    {
+        $config = $this->get_integrations_config();
+        $scripts = [];
+
+        foreach ($config as $integration) {
+            $id = '';
+            foreach ($integration['keys'] as $key) {
+                if (!empty($this->options[$key])) {
+                    $id = $this->options[$key];
+                    break;
+                }
+            }
+
+            if ($id) {
+                // If extra options needed (like matomo_url), pass options
+                $fallback_scripts = $integration['fallback']($id, $this->options);
+                foreach ($fallback_scripts as $script) {
+                    $scripts[] = $script;
+                }
+            }
+        }
+
+        if (!empty($scripts)) {
+            echo implode(PHP_EOL, $scripts) . PHP_EOL;
+        }
+    }
+
+    private function get_integrations_config()
+    {
+        return [
+            'gtm' => [
+                'keys' => ['gtm', 'gtm_id'],
+                'forward' => ['dataLayer.push'],
+                'partytown' => function ($id) {
+                    return [
+                        'external' => "https://www.googletagmanager.com/gtm.js?id={$id}",
+                        'inline' => "window.dataLayer = window.dataLayer || []; dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});"
+                    ];
+                },
+                'fallback' => function ($id) {
+                    return [
+                        "<script async src='https://www.googletagmanager.com/gtm.js?id={$id}'></script>",
+                        "<script>window.dataLayer=window.dataLayer||[];dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});</script>"
+                    ];
+                }
+            ],
+            'gtag' => [
+                'keys' => ['gtag', 'ga4_id'],
+                'forward' => ['gtag'],
+                'partytown' => function ($id) {
+                    return [
+                        'external' => "https://www.googletagmanager.com/gtag/js?id={$id}",
+                        'inline' => "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '{$id}');"
+                    ];
+                },
+                'fallback' => function ($id) {
+                    return [
+                        "<script async src='https://www.googletagmanager.com/gtag/js?id={$id}'></script>",
+                        "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{$id}');</script>"
+                    ];
+                }
+            ],
+            'fbpixel' => [
+                'keys' => ['fbpixel', 'fb_pixel_id'],
+                'forward' => ['fbq'],
+                'partytown' => function ($id) {
+                    return [
+                        'external' => "https://connect.facebook.net/en_US/fbevents.js",
+                        'inline' => "!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js'); fbq('init', '{$id}'); fbq('track', 'PageView');"
+                    ];
+                },
+                'fallback' => function ($id) {
+                    return [
+                        "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','{$id}');fbq('track','PageView');</script>"
+                    ];
+                }
+            ],
+            'tiktok' => [
+                'keys' => ['tiktok', 'tiktok_pixel_id'],
+                'forward' => ['ttq.load', 'ttq.track', 'ttq.page', 'ttq.instance'],
+                'partytown' => function ($id) {
+                    return [
+                        'external' => "https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=C6RGGFS2I7N4QUB43OL0&lib={$id}",
+                        'inline' => "!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};};}(window,document,'ttq'); ttq.load('{$id}'); ttq.page();"
+                    ];
+                },
+                'fallback' => function ($id) {
+                    return [
+                        "<script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};};}(window,document,'ttq');ttq.load('{$id}');ttq.page();</script>"
+                    ];
+                }
+            ],
+            'clarity' => [
+                'keys' => ['clarity', 'clarity_id'],
+                'forward' => ['clarity'],
+                'partytown' => function ($id) {
+                    return [
+                        'external' => "https://www.clarity.ms/tag/{$id}",
+                        'inline' => "(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};})(window,document,'clarity','script','{$id}');"
+                    ];
+                },
+                'fallback' => function ($id) {
+                    return [
+                        "<script>(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,'clarity','script','{$id}');</script>"
+                    ];
+                }
+            ],
+            'matomo' => [
+                'keys' => ['matomo', 'matomo_site_id'],
+                'forward' => ['_paq.push'],
+                'extra_options' => ['matomo_url'],
+                'partytown' => function ($id, $opts) {
+                    $url = rtrim($opts['matomo_url'] ?? '', '/');
+                    if (!$url)
+                        return [];
+                    return [
+                        'external' => null,
+                        'inline' => "var _paq = window._paq = window._paq || []; _paq.push(['trackPageView']); _paq.push(['enableLinkTracking']); _paq.push(['setTrackerUrl', '{$url}/matomo.php']); _paq.push(['setSiteId', '{$id}']);"
+                    ];
+                },
+                'fallback' => function ($id, $opts) {
+                    $url = rtrim($opts['matomo_url'] ?? '', '/');
+                    if (!$url)
+                        return [];
+                    return [
+                        "<script>var _paq=window._paq=window._paq||[];_paq.push(['trackPageView']);_paq.push(['enableLinkTracking']);(function(){var u='{$url}/';_paq.push(['setTrackerUrl',u+'matomo.php']);_paq.push(['setSiteId','{$id}']);var d=document,g=d.createElement('script'),s=d.getElementsByTagName('script')[0];g.async=true;g.src=u+'matomo.js';s.parentNode.insertBefore(g,s);})();</script>"
+                    ];
+                }
+            ]
+        ];
     }
 }

@@ -3,9 +3,27 @@ jQuery(document).ready(function ($) {
     console.log('Nav tabs found:', $('.nav-tab').length);
     console.log('Tab panes found:', $('.tab-pane').length);
 
+    // Track unsaved changes
+    var unsavedChanges = false;
+    $('form :input').on('change', function () {
+        unsavedChanges = true;
+    });
+
     // Tab switching functionality
     $('.nav-tab').on('click', function (e) {
         e.preventDefault();
+
+        if (unsavedChanges) {
+            if (!confirm('You have unsaved changes. Are you sure you want to switch tabs without saving?')) {
+                return;
+            }
+            // Reset flag if they confirm switching (changes are lost or they don't care)
+            // Actually, since forms are separate, switching doesn't inherently lose data unless the page reloads, 
+            // but user might THINK they are saving by switching. 
+            // Use simple confirm for now.
+            unsavedChanges = false;
+        }
+
         console.log('Tab clicked:', $(this).attr('href'));
         var target = $(this).attr('href');
 

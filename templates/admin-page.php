@@ -1,5 +1,6 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH'))
+    exit;
 
 $options = get_option('optimize_speed_settings', []);
 ?>
@@ -22,11 +23,12 @@ $options = get_option('optimize_speed_settings', []);
         <div id="bloat-removal" class="tab-pane active">
             <form method="post" action="options.php" class="optimize-form">
                 <?php settings_fields('optimize_speed_group'); ?>
-                
+
                 <div class="settings-section">
                     <h2>Bloat Removal Options</h2>
-                    <p class="description">Enable the optimizations you need. Each option removes unnecessary WordPress features.</p>
-                    
+                    <p class="description">Enable the optimizations you need. Each option removes unnecessary WordPress
+                        features.</p>
+
                     <div class="bloat-removal-grid">
                         <?php
                         $config = OptimizeSpeed\Services\AdminService::get_settings_config();
@@ -35,7 +37,7 @@ $options = get_option('optimize_speed_settings', []);
                             $value = isset($options[$key]) ? $options[$key] : 0;
                             $has_warning = in_array($key, ['optimize_elementor', 'remove_jquery']);
                             $is_number_input = ($key === 'limit_post_revisions_number');
-                            
+
                             if ($is_number_input) {
                                 // Special number input field
                                 ?>
@@ -43,14 +45,9 @@ $options = get_option('optimize_speed_settings', []);
                                     <span class="option-content">
                                         <span class="option-title"><?php echo esc_html($label); ?></span>
                                         <span class="option-desc"><?php echo esc_html($description); ?></span>
-                                        <input type="number" 
-                                               name="optimize_speed_settings[<?php echo esc_attr($key); ?>]" 
-                                               value="<?php echo esc_attr($value ?: 5); ?>" 
-                                               min="1" 
-                                               max="50" 
-                                               placeholder="5"
-                                               class="small-text"
-                                               style="margin-top: 8px;">
+                                        <input type="number" name="optimize_speed_settings[<?php echo esc_attr($key); ?>]"
+                                            value="<?php echo esc_attr($value ?: 5); ?>" min="1" max="50" placeholder="5"
+                                            class="small-text" style="margin-top: 8px;">
                                     </span>
                                 </div>
                                 <?php
@@ -58,15 +55,16 @@ $options = get_option('optimize_speed_settings', []);
                                 // Regular checkbox field
                                 ?>
                                 <label class="option-card">
-                                    <input type="checkbox" name="optimize_speed_settings[<?php echo esc_attr($key); ?>]" 
-                                           value="1" <?php checked(1, $value); ?>>
+                                    <input type="checkbox" name="optimize_speed_settings[<?php echo esc_attr($key); ?>]"
+                                        value="1" <?php checked(1, $value); ?>>
                                     <span class="option-content">
                                         <span class="option-title"><?php echo esc_html($label); ?></span>
                                         <?php if ($description): ?>
                                             <span class="option-desc"><?php echo esc_html($description); ?></span>
                                         <?php endif; ?>
                                         <?php if ($has_warning): ?>
-                                            <span class="option-warning">⚠️ <?php echo $key === 'remove_jquery' ? 'May break themes/plugins using jQuery' : "Don't enable if using Elementor Header/Footer"; ?></span>
+                                            <span class="option-warning">⚠️
+                                                <?php echo $key === 'remove_jquery' ? 'May break themes/plugins using jQuery' : "Don't enable if using Elementor Header/Footer"; ?></span>
                                         <?php endif; ?>
                                     </span>
                                 </label>
@@ -76,7 +74,7 @@ $options = get_option('optimize_speed_settings', []);
                         ?>
                     </div>
                 </div>
-                
+
                 <?php submit_button('Save Bloat Removal Settings'); ?>
             </form>
         </div>
@@ -85,11 +83,12 @@ $options = get_option('optimize_speed_settings', []);
         <div id="partytown" class="tab-pane">
             <form method="post" action="options.php" class="optimize-form">
                 <?php settings_fields('optimize_speed_group'); ?>
-                
+
                 <div class="settings-section">
                     <h2>Partytown Integrations</h2>
-                    <p class="description">Configure third-party script tracking IDs to load via Partytown (off main thread).</p>
-                    
+                    <p class="description">Configure third-party script tracking IDs to load via Partytown (off main
+                        thread).</p>
+
                     <div class="integration-grid">
                         <?php
                         $integrations = [
@@ -108,19 +107,17 @@ $options = get_option('optimize_speed_settings', []);
                                 <label for="<?php echo esc_attr($key); ?>">
                                     <strong><?php echo esc_html($label); ?></strong>
                                 </label>
-                                <input type="text" 
-                                       id="<?php echo esc_attr($key); ?>"
-                                       name="optimize_speed_settings[<?php echo esc_attr($key); ?>]" 
-                                       value="<?php echo esc_attr($value); ?>" 
-                                       placeholder="<?php echo esc_attr($placeholder); ?>"
-                                       class="regular-text">
+                                <input type="text" id="<?php echo esc_attr($key); ?>"
+                                    name="optimize_speed_settings[<?php echo esc_attr($key); ?>]"
+                                    value="<?php echo esc_attr($value); ?>"
+                                    placeholder="<?php echo esc_attr($placeholder); ?>" class="regular-text">
                             </div>
                             <?php
                         }
                         ?>
                     </div>
                 </div>
-                
+
                 <?php submit_button('Save Partytown Settings'); ?>
             </form>
         </div>
@@ -130,45 +127,45 @@ $options = get_option('optimize_speed_settings', []);
             <div class="settings-section">
                 <h2>Database Optimization Tools</h2>
                 <p class="description">Clean up your database to reduce size and improve performance.</p>
-                
+
                 <div class="db-tools-grid">
                     <button type="button" class="db-tool-card" data-action="transients">
                         <span class="dashicons dashicons-update"></span>
                         <strong>Clean Expired Transients</strong>
                         <small>Remove expired cached data</small>
                     </button>
-                    
+
                     <button type="button" class="db-tool-card" data-action="all_transients">
                         <span class="dashicons dashicons-trash"></span>
                         <strong>Clean All Transients</strong>
                         <small>Remove all transient cache</small>
                     </button>
-                    
+
                     <button type="button" class="db-tool-card" data-action="revisions">
                         <span class="dashicons dashicons-backup"></span>
                         <strong>Clean Post Revisions</strong>
                         <small>Remove old post revisions</small>
                     </button>
-                    
+
                     <button type="button" class="db-tool-card" data-action="auto_drafts">
                         <span class="dashicons dashicons-media-document"></span>
                         <strong>Clean Auto Drafts</strong>
                         <small>Remove auto-saved drafts</small>
                     </button>
-                    
+
                     <button type="button" class="db-tool-card" data-action="trash_spam">
                         <span class="dashicons dashicons-dismiss"></span>
                         <strong>Clean Trash & Spam</strong>
                         <small>Empty trash and remove spam</small>
                     </button>
-                    
+
                     <button type="button" class="db-tool-card primary" data-action="optimize_tables">
                         <span class="dashicons dashicons-performance"></span>
                         <strong>Optimize Tables</strong>
                         <small>Optimize database tables</small>
                     </button>
                 </div>
-                
+
                 <div id="db-optimization-result"></div>
             </div>
         </div>
@@ -184,6 +181,36 @@ $options = get_option('optimize_speed_settings', []);
                     <li>LCP Optimization (fetchpriority="high")</li>
                     <li>Auto WebP/AVIF generation</li>
                 </ul>
+
+                <hr style="margin: 20px 0;">
+
+                <h3>Configuration</h3>
+                <form method="post" action="options.php" class="optimize-form">
+                    <?php settings_fields('optimize_speed_group'); ?>
+                    <div class="bloat-removal-grid" style="grid-template-columns: 1fr;">
+                        <?php
+                        $current_mode = isset($options['image_opt_mode']) ? $options['image_opt_mode'] : 'native';
+                        ?>
+                        <label class="option-card" style="cursor: pointer;">
+                            <input type="radio" name="optimize_speed_settings[image_opt_mode]" value="native" <?php checked('native', $current_mode); ?>>
+                            <span class="option-content">
+                                <span class="option-title">Mode 1: Native (Recommended)</span>
+                                <span class="option-desc">Uses browser-native lazy loading and modern formats
+                                    (WebP/AVIF). Best for SEO and Core Web Vitals. No JavaScript overhead.</span>
+                            </span>
+                        </label>
+
+                        <label class="option-card" style="cursor: pointer;">
+                            <input type="radio" name="optimize_speed_settings[image_opt_mode]" value="lqip" <?php checked('lqip', $current_mode); ?>>
+                            <span class="option-content">
+                                <span class="option-title">Mode 2: LQIP (Low Quality Placeholder)</span>
+                                <span class="option-desc">Displays a blurred placeholder initially and lazily loads the
+                                    full image using JavaScript. Provides a smoother visual experience.</span>
+                            </span>
+                        </label>
+                    </div>
+                    <?php submit_button('Save Image Settings'); ?>
+                </form>
 
                 <hr style="margin: 20px 0;">
 
@@ -240,141 +267,141 @@ $options = get_option('optimize_speed_settings', []);
 </div>
 
 <script>
-// Image regeneration script
-(function () {
-    const NONCE_QUEUE = '<?php echo wp_create_nonce('modern_opti_queue'); ?>';
-    const NONCE_REGEN = '<?php echo wp_create_nonce('modern_opti_regen'); ?>';
-    const NONCE_CLEANUP = '<?php echo wp_create_nonce('modern_opti_cleanup_avif'); ?>';
-    const AJAX_URL = '<?php echo admin_url('admin-ajax.php'); ?>';
+    // Image regeneration script
+    (function () {
+        const NONCE_QUEUE = '<?php echo wp_create_nonce('modern_opti_queue'); ?>';
+        const NONCE_REGEN = '<?php echo wp_create_nonce('modern_opti_regen'); ?>';
+        const NONCE_CLEANUP = '<?php echo wp_create_nonce('modern_opti_cleanup_avif'); ?>';
+        const AJAX_URL = '<?php echo admin_url('admin-ajax.php'); ?>';
 
-    let running = false, paused = false, processed = 0, total = 0, queue = [];
-    let retries = {};
-    const MAX_RETRIES = 2;
+        let running = false, paused = false, processed = 0, total = 0, queue = [];
+        let retries = {};
+        const MAX_RETRIES = 2;
 
-    function log(m, c = '#0f0') {
-        const l = document.getElementById('log');
-        const d = document.createElement('div');
-        d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + m;
-        d.style.color = c;
-        l.appendChild(d);
-        l.scrollTop = l.scrollHeight;
-    }
-
-    function update() {
-        const p = total > 0 ? Math.round((processed / total) * 100) : 0;
-        document.getElementById('progress-bar').style.width = p + '%';
-        document.getElementById('processed').textContent = processed;
-        document.getElementById('percent').textContent = p;
-    }
-
-    function processBatch() {
-        if (!running || paused || queue.length === 0) {
-            if (queue.length === 0 && processed > 0 && running) finish();
-            return;
+        function log(m, c = '#0f0') {
+            const l = document.getElementById('log');
+            const d = document.createElement('div');
+            d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + m;
+            d.style.color = c;
+            l.appendChild(d);
+            l.scrollTop = l.scrollHeight;
         }
-        const batch = queue.splice(0, 1);
-        let done = 0;
 
-        batch.forEach(id => {
-            fetch(AJAX_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                body: new URLSearchParams({ action: 'modern_opti_regen', id: id, _wpnonce: NONCE_REGEN })
-            })
-                .then(r => r.json())
-                .then(d => {
-                    done++;
-                    if (d && d.success) {
-                        processed++;
-                        log('✓ Completed ID ' + id, '#0f0');
-                        delete retries[id];
-                    } else {
-                        const msg = (d && d.data ? d.data : 'Unknown error');
-                        log('✗ Error ID ' + id + ': ' + msg, '#f55');
+        function update() {
+            const p = total > 0 ? Math.round((processed / total) * 100) : 0;
+            document.getElementById('progress-bar').style.width = p + '%';
+            document.getElementById('processed').textContent = processed;
+            document.getElementById('percent').textContent = p;
+        }
+
+        function processBatch() {
+            if (!running || paused || queue.length === 0) {
+                if (queue.length === 0 && processed > 0 && running) finish();
+                return;
+            }
+            const batch = queue.splice(0, 1);
+            let done = 0;
+
+            batch.forEach(id => {
+                fetch(AJAX_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: new URLSearchParams({ action: 'modern_opti_regen', id: id, _wpnonce: NONCE_REGEN })
+                })
+                    .then(r => r.json())
+                    .then(d => {
+                        done++;
+                        if (d && d.success) {
+                            processed++;
+                            log('✓ Completed ID ' + id, '#0f0');
+                            delete retries[id];
+                        } else {
+                            const msg = (d && d.data ? d.data : 'Unknown error');
+                            log('✗ Error ID ' + id + ': ' + msg, '#f55');
+                            retries[id] = (retries[id] || 0) + 1;
+                            if (retries[id] < MAX_RETRIES) { queue.push(id); } else { processed++; }
+                        }
+                        update();
+                        if (done === batch.length) setTimeout(processBatch, 500);
+                    }).catch(err => {
+                        done++;
+                        log('✗ Network Error ID ' + id, '#fa0');
                         retries[id] = (retries[id] || 0) + 1;
                         if (retries[id] < MAX_RETRIES) { queue.push(id); } else { processed++; }
+                        if (done === batch.length) setTimeout(processBatch, 1500);
+                    });
+            });
+        }
+
+        function start() {
+            log('Loading image list...');
+            fetch(AJAX_URL, {
+                method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: new URLSearchParams({ action: 'modern_opti_queue', _wpnonce: NONCE_QUEUE })
+            }).then(r => r.json())
+                .then(d => {
+                    if (d && d.success) {
+                        queue = Array.isArray(d.data.ids) ? d.data.ids : [];
+                        total = queue.length;
+                        document.getElementById('total-count').textContent = total;
+                        document.getElementById('total').textContent = total;
+                        document.getElementById('progress-container').style.display = 'block';
+                        document.getElementById('start-btn').style.display = 'none';
+                        document.getElementById('pause-btn').style.display = 'inline-block';
+                        running = true;
+                        log('Starting process for ' + total + ' images...');
+                        processBatch();
+                    } else {
+                        log('Error fetching image list!', '#f55');
                     }
-                    update();
-                    if (done === batch.length) setTimeout(processBatch, 500);
-                }).catch(err => {
-                    done++;
-                    log('✗ Network Error ID ' + id, '#fa0');
-                    retries[id] = (retries[id] || 0) + 1;
-                    if (retries[id] < MAX_RETRIES) { queue.push(id); } else { processed++; }
-                    if (done === batch.length) setTimeout(processBatch, 1500);
                 });
-        });
-    }
+        }
 
-    function start() {
-        log('Loading image list...');
+        function finish() {
+            running = false;
+            document.getElementById('pause-btn').style.display = 'none';
+            document.getElementById('resume-btn').style.display = 'none';
+            document.getElementById('start-btn').style.display = 'inline-block';
+            log('ALL DONE!', 'lime');
+        }
+
+        document.getElementById('start-btn').onclick = start;
+        document.getElementById('pause-btn').onclick = () => {
+            paused = true;
+            document.getElementById('pause-btn').style.display = 'none';
+            document.getElementById('resume-btn').style.display = 'inline-block';
+            log('PAUSED', 'orange');
+        };
+        document.getElementById('resume-btn').onclick = () => {
+            paused = false;
+            document.getElementById('resume-btn').style.display = 'none';
+            document.getElementById('pause-btn').style.display = 'inline-block';
+            log('RESUMING...', '#0f0');
+            processBatch();
+        };
+
+        // Initial count
         fetch(AJAX_URL, {
-            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
             body: new URLSearchParams({ action: 'modern_opti_queue', _wpnonce: NONCE_QUEUE })
-        }).then(r => r.json())
-            .then(d => {
-                if (d && d.success) {
-                    queue = Array.isArray(d.data.ids) ? d.data.ids : [];
-                    total = queue.length;
-                    document.getElementById('total-count').textContent = total;
-                    document.getElementById('total').textContent = total;
-                    document.getElementById('progress-container').style.display = 'block';
-                    document.getElementById('start-btn').style.display = 'none';
-                    document.getElementById('pause-btn').style.display = 'inline-block';
-                    running = true;
-                    log('Starting process for ' + total + ' images...');
-                    processBatch();
-                } else {
-                    log('Error fetching image list!', '#f55');
-                }
-            });
-    }
+        }).then(r => r.json()).then(d => {
+            document.getElementById('total-count').textContent = (d && d.success) ? (Array.isArray(d.data.ids) ? d.data.ids.length : 0) : '0';
+        });
 
-    function finish() {
-        running = false;
-        document.getElementById('pause-btn').style.display = 'none';
-        document.getElementById('resume-btn').style.display = 'none';
-        document.getElementById('start-btn').style.display = 'inline-block';
-        log('ALL DONE!', 'lime');
-    }
-
-    document.getElementById('start-btn').onclick = start;
-    document.getElementById('pause-btn').onclick = () => {
-        paused = true;
-        document.getElementById('pause-btn').style.display = 'none';
-        document.getElementById('resume-btn').style.display = 'inline-block';
-        log('PAUSED', 'orange');
-    };
-    document.getElementById('resume-btn').onclick = () => {
-        paused = false;
-        document.getElementById('resume-btn').style.display = 'none';
-        document.getElementById('pause-btn').style.display = 'inline-block';
-        log('RESUMING...', '#0f0');
-        processBatch();
-    };
-
-    // Initial count
-    fetch(AJAX_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-        body: new URLSearchParams({ action: 'modern_opti_queue', _wpnonce: NONCE_QUEUE })
-    }).then(r => r.json()).then(d => {
-        document.getElementById('total-count').textContent = (d && d.success) ? (Array.isArray(d.data.ids) ? d.data.ids.length : 0) : '0';
-    });
-
-    document.getElementById('cleanup-avif-btn').onclick = function () {
-        if (!confirm('Delete all bad AVIF files (< 100 bytes)?')) return;
-        const btn = this; btn.disabled = true;
-        btn.textContent = '⏳ Scanning...';
-        fetch(AJAX_URL, {
-            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-            body: new URLSearchParams({ action: 'modern_opti_cleanup_avif', _wpnonce: NONCE_CLEANUP })
-        }).then(r => r.json())
-            .then(d => {
-                btn.disabled = false; btn.textContent = '🗑️ Cleanup Bad AVIF';
-                if (d && d.success) { alert('Deleted: ' + d.data.deleted + ' files'); }
-                else { alert('Error!'); }
-            });
-    };
-})();
+        document.getElementById('cleanup-avif-btn').onclick = function () {
+            if (!confirm('Delete all bad AVIF files (< 100 bytes)?')) return;
+            const btn = this; btn.disabled = true;
+            btn.textContent = '⏳ Scanning...';
+            fetch(AJAX_URL, {
+                method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: new URLSearchParams({ action: 'modern_opti_cleanup_avif', _wpnonce: NONCE_CLEANUP })
+            }).then(r => r.json())
+                .then(d => {
+                    btn.disabled = false; btn.textContent = '🗑️ Cleanup Bad AVIF';
+                    if (d && d.success) { alert('Deleted: ' + d.data.deleted + ' files'); }
+                    else { alert('Error!'); }
+                });
+        };
+    })();
 </script>
