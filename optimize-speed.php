@@ -56,7 +56,7 @@ function optimize_speed_init()
 
     // New Performance Services
     $plugin->register_service(new \OptimizeSpeed\Services\LazyLoadService());
-    $plugin->register_service(new \OptimizeSpeed\Services\ScriptDelayService());
+    $plugin->register_service(new \OptimizeSpeed\Services\ScriptManagerService());
     $plugin->register_service(new \OptimizeSpeed\Services\ResourceHintService());
     $plugin->register_service(new \OptimizeSpeed\Services\LocalFontService());
 

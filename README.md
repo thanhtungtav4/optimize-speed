@@ -115,8 +115,7 @@ The plugin includes Partytown library files in `assets/partytown/`:
 
 - **Website:** https://nttung.dev/toi-uu-toc-do-website/
 - **INP Guide:** https://nttung.dev/huong-dan-toi-uu-inp/
-- **Partytown Integration:** See `PARTYTOWN_INTEGRATION.md`
-- **Tab Navigation Fix:** See `FIX_TAB_NAVIGATION.md`
+
 
 ## Changelog
 

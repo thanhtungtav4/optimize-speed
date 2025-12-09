@@ -35,8 +35,6 @@ class AdminService implements ServiceInterface
                 ['disable_emojis', 'Disable Emojis', 'Removes extra JS/CSS'],
                 ['disable_embeds', 'Disable Embeds', 'Removes oEmbed JS/Routes'],
                 ['disable_xmlrpc', 'Disable XML-RPC', 'Security & Performance'],
-                ['disable_jquery_migrate', 'Disable jQuery Migrate', 'Removes compatibility layer'],
-                ['remove_jquery', 'Remove jQuery Completely', '⚠️ May break themes/plugins'],
                 ['disable_widget_blocks', 'Disable Widget Block Editor', 'Use classic widgets'],
 
                 // Meta Tags & Links
@@ -62,9 +60,6 @@ class AdminService implements ServiceInterface
                 ['limit_heartbeat', 'Limit Heartbeat', '60s interval'],
                 ['disable_heartbeat', 'Disable Heartbeat API', 'Completely disable'],
                 ['disable_dns_prefetch', 'Disable DNS Prefetch', 'Remove resource hints'],
-                ['defer_javascript', 'Defer JavaScript', 'Add defer to scripts'],
-                ['delay_javascript', 'Delay JavaScript Execution', 'Delay until user interaction (Click, Scroll, Move)'],
-                ['delay_javascript_keywords', 'Delay JS Keywords', 'One per line. Handle or filename.'],
                 ['lazyload_iframes', 'Lazy Load Iframes/Videos', 'Replace YouTube/Vimeo with thumbnail facade'],
                 ['local_google_fonts', 'Local Google Fonts', 'Download and serve Google Fonts locally'],
                 ['preload_resources', 'Preload Resources', 'One URL per line'],
@@ -75,17 +70,13 @@ class AdminService implements ServiceInterface
                 // Assets & Styles
                 ['remove_query_strings', 'Remove Query Strings', 'Remove ?ver= from CSS/JS'],
                 ['disable_self_pingbacks', 'Disable Self Pingbacks', 'Stop pinging own posts'],
-                ['remove_dashicons', 'Remove Dashicons', 'Disable on frontend'],
                 ['disable_gravatars', 'Disable Gravatars', 'Remove Gravatar requests'],
-                ['disable_google_fonts', 'Disable Google Fonts', 'Block all Google Fonts'],
-                ['remove_recent_comments_style', 'Remove Recent Comments Style', 'Widget CSS'],
 
                 // Comments
                 ['disable_comments', 'Disable Comments', 'Completely disable system'],
 
                 // Gutenberg
                 ['disable_global_styles', 'Disable Global Styles', 'Remove huge inline CSS & SVGs'],
-                ['disable_block_library', 'Disable Block CSS', 'If not using Gutenberg'],
                 ['disable_duotone_svg', 'Disable Duotone SVG', 'Remove Gutenberg filters'],
 
                 // Page Builders

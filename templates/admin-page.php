@@ -12,6 +12,8 @@ $options = get_option('optimize_speed_settings', []);
     <!-- Tab Navigation -->
     <nav class="nav-tab-wrapper">
         <a href="#bloat-removal" class="nav-tab nav-tab-active">🧹 Bloat Removal</a>
+        <a href="#performance" class="nav-tab">🚀 Performance</a>
+        <a href="#script-manager" class="nav-tab">📜 Script Manager</a>
         <a href="#partytown" class="nav-tab">🎭 Partytown</a>
         <a href="#database" class="nav-tab">🗄️ Database</a>
         <a href="#images" class="nav-tab">🖼️ Images</a>
@@ -166,6 +168,242 @@ $options = get_option('optimize_speed_settings', []);
                 </div>
             </div>
 
+            <!-- Script Manager Tab -->
+            <div id="script-manager" class="tab-pane">
+                <div class="settings-section">
+                    <h2>Global Script Settings</h2>
+                    <p class="description">Control how JavaScript is loaded globally across your site.</p>
+                    <div class="bloat-removal-grid">
+                        <label class="option-card">
+                            <input type="checkbox" name="optimize_speed_settings[defer_javascript]" value="1" <?php checked(1, isset($options['defer_javascript']) ? $options['defer_javascript'] : 0); ?>>
+                            <span class="option-content">
+                                <span class="option-title">Defer JavaScript</span>
+                                <span class="option-desc">Add defer attribute to scripts globally.</span>
+                            </span>
+                        </label>
+                        <label class="option-card">
+                            <input type="checkbox" name="optimize_speed_settings[delay_javascript]" value="1" <?php checked(1, isset($options['delay_javascript']) ? $options['delay_javascript'] : 0); ?>>
+                            <span class="option-content">
+                                <span class="option-title">Delay JavaScript Execution</span>
+                                <span class="option-desc">Delay until user interaction (Click, Scroll, Move).</span>
+                            </span>
+                        </label>
+
+                        <div class="option-card" style="grid-column: span 2;">
+                            <span class="option-content">
+                                <span class="option-title">Delay JS Keywords</span>
+                                <span class="option-desc">One per line. Handle or filename (e.g.,
+                                    <code>jquery-migrate</code>, <code>slider.js</code>).</span>
+                                <textarea name="optimize_speed_settings[delay_javascript_keywords]" rows="5"
+                                    class="large-text code"
+                                    style="margin-top:10px;"><?php echo esc_textarea(isset($options['delay_javascript_keywords']) ? $options['delay_javascript_keywords'] : ''); ?></textarea>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h2>Visual Asset Scanner</h2>
+                    <p class="description">Select a page to scan for loaded scripts and styles, then configure them
+                        visually.</p>
+
+                    <div
+                        style="display:flex; gap:10px; align-items:center; margin-bottom:15px; background:#fff; padding:15px; border:1px solid #ccd0d4; border-radius:4px;">
+                        <select id="scan-target-type">
+                            <option value="homepage">Homepage</option>
+                            <option value="id">Specific Page ID</option>
+                        </select>
+                        <input type="number" id="scan-target-id" placeholder="Page ID (e.g., 123)"
+                            style="display:none; width:100px;">
+                        <button type="button" class="button button-primary" id="start-scan-btn">🔍 Scan Assets</button>
+                        <span class="spinner" id="scan-spinner"></span>
+                    </div>
+
+                    <div id="scan-results" style="display:none;">
+                        <h3>Scanned Assets <span id="scan-url-display"
+                                style="font-weight:normal; font-size:12px; color:#666;"></span></h3>
+                        <table class="wp-list-table widefat fixed striped">
+                            <thead>
+                                <tr>
+                                    <th>Asset Handle</th>
+                                    <th>Type</th>
+                                    <th>Source</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scan-results-body">
+                                <!-- Results populated by JS -->
+                            </tbody>
+                        </table>
+                        <p style="margin-top:10px; text-align:right;">
+                            <button type="button" class="button" id="clear-scan-btn">Clear Results</button>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h2>Script Rules Engine</h2>
+                    <p class="description">Define specific rules for plugins or pages. Overrides global settings.</p>
+
+                    <table class="wp-list-table widefat fixed striped" id="rules-table">
+                        <thead>
+                            <tr>
+                                <th width="20%">Target</th>
+                                <th width="25%">Asset Handle/Keyword</th>
+                                <th width="15%">Type</th>
+                                <th width="25%">Strategy</th>
+                                <th width="15%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rules-tbody">
+                            <?php
+                            // Fetch public post types
+                            $post_types = get_post_types(['public' => true], 'objects');
+                            $exclude_types = ['attachment'];
+                            $pt_js = [];
+                            foreach ($post_types as $pt) {
+                                if (!in_array($pt->name, $exclude_types)) {
+                                    $pt_js[] = ['slug' => $pt->name, 'label' => $pt->label];
+                                }
+                            }
+
+                            // Fetch page templates
+                            $templates = get_page_templates(null, 'page');
+                            if (empty($templates)) {
+                                $templates = array_flip(get_page_templates());
+                            }
+                            $tpl_js = [];
+                            foreach ($templates as $tname => $tfile) {
+                                $tpl_js[] = ['file' => $tfile, 'name' => $tname];
+                            }
+                            ?>
+                            <script>
+                                window.osData = {
+                                    post_types: <?php echo json_encode($pt_js); ?>,
+                                    templates: <?php echo json_encode($tpl_js); ?>
+                                };
+                            </script>
+                            <?php
+
+                            $rules = isset($options['script_manager_rules']) ? $options['script_manager_rules'] : [];
+                            if (!is_array($rules))
+                                $rules = [];
+
+                            foreach ($rules as $i => $rule):
+                                $rule_target = isset($rule['target']) ? $rule['target'] : 'global';
+                                $custom_id = isset($rule['custom_id']) ? $rule['custom_id'] : '';
+
+                                // Determine visibility
+                                $show_custom = ($rule_target === 'custom');
+                                $show_post_type = ($rule_target === 'post_type');
+                                $show_template = ($rule_target === 'page_template');
+                                ?>
+                                <tr class="rule-row">
+                                    <td>
+                                        <select
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][target]"
+                                            class="rule-target-select" style="width:100%">
+                                            <option value="global" <?php selected($rule_target, 'global'); ?>>Global (All
+                                                Pages)</option>
+                                            <option value="homepage" <?php selected($rule_target, 'homepage'); ?>>Homepage
+                                            </option>
+                                            <option value="custom" <?php selected($rule_target, 'custom'); ?>>Specific Page
+                                                ID</option>
+                                            <option value="post_type" <?php selected($rule_target, 'post_type'); ?>>Specific
+                                                Post Type</option>
+                                            <option value="page_template" <?php selected($rule_target, 'page_template'); ?>>
+                                                Specific Page Template</option>
+                                        </select>
+
+                                        <!-- ID Input -->
+                                        <input type="number"
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_num]"
+                                            value="<?php echo ($show_custom ? esc_attr($custom_id) : ''); ?>"
+                                            placeholder="Page ID"
+                                            style="width:100%; margin-top:5px; display:<?php echo ($show_custom ? 'block' : 'none'); ?>"
+                                            class="target-id-input target-input-custom">
+
+                                        <!-- Post Type Select -->
+                                        <select
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_type]"
+                                            class="target-input-post_type"
+                                            style="width:100%; margin-top:5px; display:<?php echo ($show_post_type ? 'block' : 'none'); ?>">
+                                            <option value="">Select Post Type</option>
+                                            <?php foreach ($post_types as $pt):
+                                                if (in_array($pt->name, $exclude_types))
+                                                    continue;
+                                                ?>
+                                                <option value="<?php echo esc_attr($pt->name); ?>" <?php selected($custom_id, $pt->name); ?>><?php echo esc_html($pt->label); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+
+                                        <!-- Page Template Select -->
+                                        <select
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_tpl]"
+                                            class="target-input-page_template"
+                                            style="width:100%; margin-top:5px; display:<?php echo ($show_template ? 'block' : 'none'); ?>">
+                                            <option value="default">Default Template</option>
+                                            <?php foreach ($templates as $tpl_name => $tpl_file): ?>
+                                                <option value="<?php echo esc_attr($tpl_file); ?>" <?php selected($custom_id, $tpl_file); ?>><?php echo esc_html($tpl_name); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+
+                                        <!-- Hidden consolidated field to store final 'custom_id' -->
+                                        <input type="hidden" class="final-custom-id"
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id]"
+                                            value="<?php echo esc_attr($custom_id); ?>">
+
+                                    </td>
+                                    <td>
+                                        <input type="text"
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][handle]"
+                                            value="<?php echo esc_attr(isset($rule['handle']) ? $rule['handle'] : ''); ?>"
+                                            style="width:100%" placeholder="e.g. jquery">
+                                        <label style="display:block; margin-top:4px; font-size:12px;">
+                                            <input type="checkbox" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][is_regex]" value="1" <?php checked(isset($rule['is_regex']) ? $rule['is_regex'] : 0, 1); ?>> 
+                                            Regex Match
+                                        </label>
+                                    </td>
+                                    <td>
+                                        <select
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][type]"
+                                            style="width:100%">
+                                            <option value="js" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'js'); ?>>JavaScript (JS)</option>
+                                            <option value="css" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'css'); ?>>CSS Style</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][strategy]"
+                                            class="rule-strategy-select"
+                                            style="width:100%">
+                                            <option value="async" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'async'); ?>>Async</option>
+                                            <option value="defer" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'defer'); ?>>Defer</option>
+                                            <option value="delay" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'delay'); ?>>Delay (Interaction)</option>
+                                            <option value="preload" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'preload'); ?>>Preload (Head)</option>
+                                            <option value="disable" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'disable'); ?>>Disable (Dequeue)</option>
+                                        </select>
+                                        <label class="crossorigin-opt" style="display:<?php echo (isset($rule['strategy']) && $rule['strategy'] === 'preload') ? 'block' : 'none'; ?>; margin-top:4px; font-size:12px;">
+                                            <input type="checkbox" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][crossorigin]" value="1" <?php checked(isset($rule['crossorigin']) ? $rule['crossorigin'] : 0, 1); ?>>
+                                            Crossorigin
+                                        </label>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="button remove-rule-btn">Remove</button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+
+                    <p>
+                        <button type="button" class="button button-primary" id="add-rule-btn">Add New Rule</button>
+                    </p>
+                </div>
+
+                <?php submit_button('Save Settings'); ?>
+            </div>
+
             <!-- Performance Tab -->
             <div id="performance" class="tab-pane">
                 <div class="settings-section">
@@ -178,12 +416,9 @@ $options = get_option('optimize_speed_settings', []);
                         // Filter for performance keys
                         $perf_keys = [
                             'lazyload_iframes',
-                            'delay_javascript',
-                            'delay_javascript_keywords',
                             'local_google_fonts',
                             'preload_resources',
-                            'disable_dns_prefetch',
-                            'defer_javascript'
+                            'disable_dns_prefetch'
                         ];
 
                         foreach ($config['bloat_removal'] as $field) {
@@ -193,7 +428,7 @@ $options = get_option('optimize_speed_settings', []);
 
                             $value = isset($options[$key]) ? $options[$key] : '';
 
-                            if ($key === 'delay_javascript_keywords' || $key === 'preload_resources') {
+                            if ($key === 'preload_resources') {
                                 ?>
                                 <div class="option-card" style="grid-column: span 2;">
                                     <span class="option-content">
