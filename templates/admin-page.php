@@ -208,13 +208,31 @@ $options = get_option('optimize_speed_settings', []);
                         visually.</p>
 
                     <div
-                        style="display:flex; gap:10px; align-items:center; margin-bottom:15px; background:#fff; padding:15px; border:1px solid #ccd0d4; border-radius:4px;">
+                        style="display:flex; gap:10px; align-items:center; margin-bottom:15px; background:#fff; padding:15px; border:1px solid #ccd0d4; border-radius:4px; flex-wrap:wrap;">
                         <select id="scan-target-type">
                             <option value="homepage">Homepage</option>
+                            <option value="post_type">Latest Post of Type...</option>
+                            <option value="archive">Archive of Type...</option>
+                            <option value="url">Custom URL</option>
                             <option value="id">Specific Page ID</option>
                         </select>
+                        
+                        <!-- Manual ID Input -->
                         <input type="number" id="scan-target-id" placeholder="Page ID (e.g., 123)"
                             style="display:none; width:100px;">
+                        
+                        <!-- Manual URL Input -->
+                        <input type="url" id="scan-target-url" placeholder="https://..."
+                            style="display:none; width:300px;">
+
+                        <!-- Post Type Select -->
+                        <select id="scan-target-post-type" style="display:none;">
+                            <option value="">Select Type</option>
+                            <?php foreach($pt_js as $pt): ?>
+                                <option value="<?php echo esc_attr($pt['slug']); ?>"><?php echo esc_html($pt['label']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+
                         <button type="button" class="button button-primary" id="start-scan-btn">🔍 Scan Assets</button>
                         <span class="spinner" id="scan-spinner"></span>
                     </div>
@@ -259,13 +277,40 @@ $options = get_option('optimize_speed_settings', []);
                             <?php
                             // Fetch public post types
                             $post_types = get_post_types(['public' => true], 'objects');
-                            $exclude_types = ['attachment'];
+                            $exclude_types = ['attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block'];
+
                             $pt_js = [];
+                            $sample_urls = [];
+
                             foreach ($post_types as $pt) {
                                 if (!in_array($pt->name, $exclude_types)) {
                                     $pt_js[] = ['slug' => $pt->name, 'label' => $pt->label];
+
+                                    // Get Latest Post of this Type
+                                    $latest_posts = get_posts([
+                                        'post_type' => $pt->name,
+                                        'numberposts' => 1,
+                                        'post_status' => 'publish',
+                                    ]);
+
+                                    $single_url = '';
+                                    if (!empty($latest_posts)) {
+                                        $single_url = get_permalink($latest_posts[0]->ID);
+                                    }
+
+                                    // Get Archive URL (if registered)
+                                    $archive_url = '';
+                                    if ($pt->has_archive) {
+                                        $archive_url = get_post_type_archive_link($pt->name);
+                                    }
+
+                                    $sample_urls[$pt->name] = [
+                                        'single' => $single_url,
+                                        'archive' => $archive_url
+                                    ];
                                 }
                             }
+
                             // Fetch page templates
                             $templates = get_page_templates(null, 'page');
                             if (empty($templates)) {
@@ -279,7 +324,8 @@ $options = get_option('optimize_speed_settings', []);
                             <script>
                                 window.osData = {
                                     post_types: <?php echo json_encode($pt_js); ?>,
-                                    templates: <?php echo json_encode($tpl_js); ?>
+                                    templates: <?php echo json_encode($tpl_js); ?>,
+                                    sample_urls: <?php echo json_encode($sample_urls); ?>
                                 };
                             </script>
                             <?php

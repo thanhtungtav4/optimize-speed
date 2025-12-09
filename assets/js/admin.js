@@ -318,67 +318,115 @@ jQuery(document).ready(function ($) {
 
     // --- Visual Asset Scanner ---
 
+    // 1. Toggle Scanner Inputs
     $('#scan-target-type').on('change', function () {
-        if ($(this).val() === 'id') {
+        var val = $(this).val();
+        $('#scan-target-id, #scan-target-post-type, #scan-target-url').hide();
+
+        if (val === 'id') {
             $('#scan-target-id').show();
-        } else {
-            $('#scan-target-id').hide();
+        } else if (val === 'post_type' || val === 'archive') {
+            $('#scan-target-post-type').show();
+        } else if (val === 'url') {
+            $('#scan-target-url').show();
         }
     });
 
     $('#start-scan-btn').on('click', function () {
+        var btn = $(this);
         var type = $('#scan-target-type').val();
-        var id = $('#scan-target-id').val();
-        var url = '/'; // Default homepage
+        var spinner = $('#scan-spinner');
+        var resultsDiv = $('#scan-results');
+        var tbody = $('#scan-results-body');
+        var urlDisplay = $('#scan-url-display');
 
-        if (type === 'id') {
-            if (!id) {
-                alert('Please enter a Page ID');
+        var targetUrl = '';
+
+        // Determine Target URL
+        if (type === 'homepage') {
+            targetUrl = optimizeSpeedAdmin.siteUrl; // We assume root
+            // Or better:
+            targetUrl = '/';
+        } else if (type === 'id') {
+            var id = $('#scan-target-id').val();
+            if (!id) { alert('Please enter a Page ID'); return; }
+            targetUrl = '/?p=' + id; // Standard WP way to reach any ID if permalinks are messy, handled by redirect usually.
+            // Or use the REST API to get link? No, ?p=ID is reliable for frontend visit.
+        } else if (type === 'url') {
+            targetUrl = $('#scan-target-url').val();
+            if (!targetUrl) { alert('Please enter a URL'); return; }
+        } else if (type === 'post_type') {
+            var pt = $('#scan-target-post-type').val();
+            if (!pt) { alert('Please select a Post Type'); return; }
+
+            if (window.osData.sample_urls && window.osData.sample_urls[pt] && window.osData.sample_urls[pt].single) {
+                targetUrl = window.osData.sample_urls[pt].single;
+            } else {
+                alert('No published posts found for this type to scan.');
                 return;
             }
-            url = '/?p=' + id;
+        } else if (type === 'archive') {
+            var pt = $('#scan-target-post-type').val();
+            if (!pt) { alert('Please select a Post Type'); return; }
+
+            if (window.osData.sample_urls && window.osData.sample_urls[pt] && window.osData.sample_urls[pt].archive) {
+                targetUrl = window.osData.sample_urls[pt].archive;
+            } else {
+                alert('No archive found for this type.');
+                return;
+            }
         }
 
-        var scanUrl = url + (url.indexOf('?') !== -1 ? '&' : '?') + 'os_scan_assets=1';
+        // Add scan param
+        var scanUrl = targetUrl;
+        if (scanUrl.indexOf('?') > -1) {
+            scanUrl += '&os_scan_assets=1';
+        } else {
+            scanUrl += '?os_scan_assets=1';
+        }
 
-        $('#scan-spinner').addClass('is-active');
-        $('#start-scan-btn').prop('disabled', true);
-        $('#scan-results').hide();
-        $('#scan-results-body').empty();
+        // Handle relative URLs for display/fetching if needed
+        if (scanUrl.indexOf('http') !== 0) {
+            scanUrl = optimizeSpeedAdmin.siteUrl + scanUrl; // rudimentary join
+        }
 
+        btn.prop('disabled', true);
+        spinner.addClass('is-active');
+        resultsDiv.hide();
+        tbody.empty();
+        urlDisplay.text('Scanning: ' + scanUrl);
+
+        // Perform Scan (Fetch the frontend page)
         $.get(scanUrl)
-            .done(function (resp) {
-                $('#scan-spinner').removeClass('is-active');
-                $('#start-scan-btn').prop('disabled', false);
+            .done(function (response) {
+                btn.prop('disabled', false);
+                spinner.removeClass('is-active');
 
-                if (resp && resp.success && resp.data) {
-                    $('#scan-results').show();
-                    $('#scan-url-display').text('Scan Target: ' + url);
-                    var assets = resp.data;
+                if (response.success) {
+                    var assets = response.data;
+                    var hasResults = false;
 
-                    // Helper render
-                    var renderRow = function (item, type) {
-                        return `
-                            <tr>
-                                <td><strong>${item.handle}</strong></td>
-                                <td>${type.toUpperCase()}</td>
-                                <td><div style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${item.src}">${item.src}</div></td>
-                                <td>
-                                    <button type="button" class="button button-small add-scanned-rule" data-handle="${item.handle}" data-type="${type}" data-strategy="async">Async</button>
-                                    <button type="button" class="button button-small add-scanned-rule" data-handle="${item.handle}" data-type="${type}" data-strategy="defer">Defer</button>
-                                    <button type="button" class="button button-small add-scanned-rule" data-handle="${item.handle}" data-type="${type}" data-strategy="delay">Delay</button>
-                                    <button type="button" class="button button-small add-scanned-rule" data-handle="${item.handle}" data-type="${type}" data-strategy="disable" style="color:#a00">Disable</button>
-                                </td>
-                            </tr>
-                         `;
-                    };
-
-                    if (assets.js) assets.js.forEach(item => $('#scan-results-body').append(renderRow(item, 'js')));
-                    if (assets.css) assets.css.forEach(item => $('#scan-results-body').append(renderRow(item, 'css')));
-
-                    if (assets.js.length === 0 && assets.css.length === 0) {
-                        $('#scan-results-body').html('<tr><td colspan="4">No assets found or scan failed.</td></tr>');
+                    // JS
+                    if (assets.js) {
+                        assets.js.forEach(function (item) {
+                            hasResults = true;
+                            tbody.append(buildScanRow(item, 'js'));
+                        });
                     }
+
+                    // CSS
+                    if (assets.css) {
+                        assets.css.forEach(function (item) {
+                            hasResults = true;
+                            tbody.append(buildScanRow(item, 'css'));
+                        });
+                    }
+
+                    if (!hasResults) {
+                        tbody.append('<tr><td colspan="4">No assets found or scanner blocked.</td></tr>');
+                    }
+
+                    resultsDiv.fadeIn();
 
                 } else {
                     alert('Scan failed. Please check if the page exists.');

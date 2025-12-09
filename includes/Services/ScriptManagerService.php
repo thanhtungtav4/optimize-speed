@@ -75,13 +75,10 @@ class ScriptManagerService implements ServiceInterface
             return;
         }
 
-        // We wait for scripts to be printed (simulated)
-        // Or deeper: we hook into print_scripts late, capture, and exit.
+        // Start output buffering to capture and discard all HTML
+        ob_start();
 
-        // Better approach: We let WP load, and at the very end of header (or before footer), we dump data.
-        // Actually, we need both header and footer scripts.
-        // So we should hook to 'wp_print_footer_scripts' at very high priority.
-
+        // We hook to 'wp_print_footer_scripts' at very high priority to ensure we catch everything
         add_action('wp_print_footer_scripts', [$this, 'return_scan_results'], 999999);
     }
 
@@ -118,6 +115,11 @@ class ScriptManagerService implements ServiceInterface
                     ];
                 }
             }
+        }
+
+        // Clean buffer (discard HTML)
+        while (ob_get_level()) {
+            ob_end_clean();
         }
 
         wp_send_json_success($assets);
@@ -252,6 +254,19 @@ class ScriptManagerService implements ServiceInterface
         }
 
         return null;
+    }
+
+    private function has_active_delay_rules()
+    {
+        if (isset($this->page_rules['js'])) {
+            // Need to check strategy prop now
+            foreach ($this->page_rules['js'] as $rule) {
+                if (isset($rule['strategy']) && $rule['strategy'] === 'delay') {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
