@@ -29,23 +29,23 @@ class PartytownService implements ServiceInterface
     {
         // Partytown files are now bundled in assets/partytown/ directory
         // No need to create files dynamically - they're included in the plugin
-        
+
         $partytown_dir = OPTIMIZE_SPEED_DIR . 'assets/partytown';
-        
+
         // Just verify files exist (for debugging purposes)
         $required_files = ['partytown.js', 'partytown-sw.js', 'partytown-atomics.js', 'partytown-media.js'];
         $all_exist = true;
-        
+
         foreach ($required_files as $file) {
             if (!file_exists($partytown_dir . '/' . $file)) {
                 $all_exist = false;
                 error_log("Optimize Speed: Missing Partytown file: {$file}");
             }
         }
-        
+
         if (!$all_exist) {
             // Show admin notice
-            add_action('admin_notices', function() {
+            add_action('admin_notices', function () {
                 echo '<div class="notice notice-error"><p><strong>Optimize Speed:</strong> Partytown assets are missing. Please reinstall the plugin.</p></div>';
             });
         }
@@ -123,9 +123,9 @@ class PartytownService implements ServiceInterface
     public function print_all_partytown_scripts()
     {
         // Check if any tracking ID is configured
-        $has_tracking = !empty($this->options['gtm']) || !empty($this->options['gtag']) || 
-                       !empty($this->options['fbpixel']) || !empty($this->options['tiktok']) ||
-                       !empty($this->options['clarity']) || !empty($this->options['matomo']);
+        $has_tracking = !empty($this->options['gtm']) || !empty($this->options['gtag']) ||
+            !empty($this->options['fbpixel']) || !empty($this->options['tiktok']) ||
+            !empty($this->options['clarity']) || !empty($this->options['matomo']);
 
         if (!$has_tracking) {
             return; // No tracking configured
@@ -199,9 +199,11 @@ class PartytownService implements ServiceInterface
 
         // Matomo
         $matomo_id = $this->options['matomo'] ?? $this->options['matomo_site_id'] ?? '';
-        if (!empty($matomo_id)) {
+        $matomo_url = $this->options['matomo_url'] ?? '';
+        if (!empty($matomo_id) && !empty($matomo_url)) {
             $matomo_id = intval($matomo_id);
-            $output .= "var _paq = window._paq = window._paq || []; _paq.push(['trackPageView']); _paq.push(['enableLinkTracking']); _paq.push(['setTrackerUrl', 'https://matomo.example.com/matomo.php']); _paq.push(['setSiteId', '{$matomo_id}']);" . PHP_EOL;
+            $matomo_url = esc_url_raw(rtrim($matomo_url, '/'));
+            $output .= "var _paq = window._paq = window._paq || []; _paq.push(['trackPageView']); _paq.push(['enableLinkTracking']); _paq.push(['setTrackerUrl', '{$matomo_url}/matomo.php']); _paq.push(['setSiteId', '{$matomo_id}']);" . PHP_EOL;
         }
 
         // Microsoft Clarity init
@@ -261,9 +263,11 @@ class PartytownService implements ServiceInterface
 
         // Matomo
         $matomo_id = $this->options['matomo'] ?? $this->options['matomo_site_id'] ?? '';
-        if (!empty($matomo_id)) {
+        $matomo_url = $this->options['matomo_url'] ?? '';
+        if (!empty($matomo_id) && !empty($matomo_url)) {
             $matomo_id = intval($matomo_id);
-            $scripts[] = "<script>var _paq=window._paq=window._paq||[];_paq.push(['trackPageView']);_paq.push(['enableLinkTracking']);(function(){var u='https://matomo.example.com/';_paq.push(['setTrackerUrl',u+'matomo.php']);_paq.push(['setSiteId','{$matomo_id}']);var d=document,g=d.createElement('script'),s=d.getElementsByTagName('script')[0];g.async=true;g.src=u+'matomo.js';s.parentNode.insertBefore(g,s);})();</script>";
+            $matomo_url = esc_url(rtrim($matomo_url, '/'));
+            $scripts[] = "<script>var _paq=window._paq=window._paq||[];_paq.push(['trackPageView']);_paq.push(['enableLinkTracking']);(function(){var u='{$matomo_url}/';_paq.push(['setTrackerUrl',u+'matomo.php']);_paq.push(['setSiteId','{$matomo_id}']);var d=document,g=d.createElement('script'),s=d.getElementsByTagName('script')[0];g.async=true;g.src=u+'matomo.js';s.parentNode.insertBefore(g,s);})();</script>";
         }
 
         if (!empty($scripts)) {

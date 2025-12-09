@@ -38,7 +38,7 @@ class AdminService implements ServiceInterface
                 ['disable_jquery_migrate', 'Disable jQuery Migrate', 'Removes compatibility layer'],
                 ['remove_jquery', 'Remove jQuery Completely', '⚠️ May break themes/plugins'],
                 ['disable_widget_blocks', 'Disable Widget Block Editor', 'Use classic widgets'],
-                
+
                 // Meta Tags & Links
                 ['remove_meta_generator', 'Remove Meta Generator Tag', 'Hide WP version'],
                 ['remove_wp_version', 'Remove WP Version', 'From all sources'],
@@ -47,26 +47,26 @@ class AdminService implements ServiceInterface
                 ['remove_rsd_link', 'Remove RSD Link', 'EditURI for external tools'],
                 ['remove_rest_api_link', 'Remove REST API Link', 'Link tag in header'],
                 ['disable_canonical', 'Disable Canonical URL', 'Remove rel canonical'],
-                
+
                 // RSS & Feeds
                 ['remove_rss_feed_links', 'Remove RSS Feed Links', 'Feed discovery links'],
                 ['disable_rss_feeds', 'Disable All RSS Feeds', 'Redirect to homepage'],
                 ['remove_rss_generator', 'Remove RSS Generator Tag', 'Hide WP version'],
-                
+
                 // Database & Revisions
                 ['disable_post_revisions', 'Disable Post Revisions', 'Stop saving revisions'],
                 ['limit_post_revisions_number', 'Limit Post Revisions', 'Input number: 3-10 recommended'],
                 ['disable_app_passwords', 'Disable Application Passwords', 'WP 5.6+ feature'],
-                
+
                 // Performance
                 ['limit_heartbeat', 'Limit Heartbeat', '60s interval'],
                 ['disable_heartbeat', 'Disable Heartbeat API', 'Completely disable'],
                 ['disable_dns_prefetch', 'Disable DNS Prefetch', 'Remove resource hints'],
                 ['defer_javascript', 'Defer JavaScript', 'Add defer to scripts'],
-                
+
                 // Security & API
                 ['disable_rest_api', 'Disable REST API', 'Restrict to logged-in users'],
-                
+
                 // Assets & Styles
                 ['remove_query_strings', 'Remove Query Strings', 'Remove ?ver= from CSS/JS'],
                 ['disable_self_pingbacks', 'Disable Self Pingbacks', 'Stop pinging own posts'],
@@ -74,24 +74,32 @@ class AdminService implements ServiceInterface
                 ['disable_gravatars', 'Disable Gravatars', 'Remove Gravatar requests'],
                 ['disable_google_fonts', 'Disable Google Fonts', 'Block all Google Fonts'],
                 ['remove_recent_comments_style', 'Remove Recent Comments Style', 'Widget CSS'],
-                
+
                 // Comments
                 ['disable_comments', 'Disable Comments', 'Completely disable system'],
-                
+
                 // Gutenberg
                 ['disable_global_styles', 'Disable Global Styles', 'Remove huge inline CSS & SVGs'],
                 ['disable_block_library', 'Disable Block CSS', 'If not using Gutenberg'],
                 ['disable_duotone_svg', 'Disable Duotone SVG', 'Remove Gutenberg filters'],
-                
+
                 // Page Builders
                 ['optimize_elementor', 'Smart Elementor Assets', '⚠️ Don\'t use with Elementor Headers'],
-                
+
                 // WooCommerce
                 ['disable_wc_cart_fragments', 'Disable WC Cart Fragments', 'Stop AJAX cart refresh'],
                 ['remove_wc_scripts_non_wc_pages', 'Remove WC Scripts on Non-WC Pages', 'Blog, pages, etc.'],
-                
+
                 // Security
                 ['disable_password_strength_meter', 'Disable Password Strength Meter', 'Frontend forms'],
+                // Analytics
+                ['gtm', 'Google Tag Manager', 'Container ID (GTM-XXXX)'],
+                ['gtag', 'Google Analytics 4', 'Measurement ID (G-XXXX)'],
+                ['fbpixel', 'Facebook Pixel', 'Pixel ID'],
+                ['tiktok', 'TikTok Pixel', 'Pixel ID'],
+                ['clarity', 'Microsoft Clarity', 'Project ID'],
+                ['matomo', 'Matomo Site ID', 'Site ID (e.g. 1)'],
+                ['matomo_url', 'Matomo URL', 'Full URL (e.g. https://matomo.yoursite.com/)'],
             ]
         ];
     }

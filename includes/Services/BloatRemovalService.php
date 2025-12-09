@@ -129,7 +129,8 @@ class BloatRemovalService implements ServiceInterface
         }
 
         if (!empty($this->options['defer_javascript'])) {
-            add_filter('script_loader_tag', [$this, 'defer_scripts'], 10, 2);
+            add_action('wp_enqueue_scripts', [$this, 'defer_scripts_modern'], 999);
+            add_filter('script_loader_tag', [$this, 'defer_scripts_legacy'], 10, 2);
         }
 
         if (!empty($this->options['disable_wc_cart_fragments'])) {
@@ -145,13 +146,13 @@ class BloatRemovalService implements ServiceInterface
         }
 
         if (!empty($this->options['limit_post_revisions_number']) && is_numeric($this->options['limit_post_revisions_number'])) {
-            add_filter('wp_revisions_to_keep', function() {
+            add_filter('wp_revisions_to_keep', function () {
                 return intval($this->options['limit_post_revisions_number']);
             });
         }
 
         if (!empty($this->options['remove_recent_comments_style'])) {
-            add_action('widgets_init', function() {
+            add_action('widgets_init', function () {
                 global $wp_widget_factory;
                 if (isset($wp_widget_factory->widgets['WP_Widget_Recent_Comments'])) {
                     remove_action('wp_head', [$wp_widget_factory->widgets['WP_Widget_Recent_Comments'], 'recent_comments_style']);
@@ -351,8 +352,43 @@ class BloatRemovalService implements ServiceInterface
         }
     }
 
-    public function defer_scripts($tag, $handle)
+    public function defer_scripts_modern()
     {
+        // Use WP 6.3+ Script Strategy if available
+        if (!function_exists('wp_script_add_data'))
+            return;
+
+        global $wp_scripts;
+        if (empty($wp_scripts->queue))
+            return;
+
+        $exclude = ['optimize-speed', 'partytown', 'jquery', 'jquery-core', 'jquery-migrate'];
+
+        foreach ($wp_scripts->queue as $handle) {
+            // Check exclusion list
+            $is_excluded = false;
+            foreach ($exclude as $ex) {
+                if (strpos($handle, $ex) !== false) {
+                    $is_excluded = true;
+                    break;
+                }
+            }
+            if ($is_excluded)
+                continue;
+
+            // Apply defer strategy
+            wp_script_add_data($handle, 'strategy', 'defer');
+        }
+    }
+
+    public function defer_scripts_legacy($tag, $handle)
+    {
+        // If we are on WP 6.3+, usually wp_script_add_data handles it, so we might not need this.
+        // But if someone manually enqueues without registration, or for compatibility:
+        if (function_exists('wp_script_add_data') && version_compare(get_bloginfo('version'), '6.3', '>=')) {
+            return $tag;
+        }
+
         // Don't defer jQuery or admin scripts
         if (is_admin() || strpos($handle, 'jquery') !== false) {
             return $tag;
@@ -408,7 +444,7 @@ class BloatRemovalService implements ServiceInterface
         wp_dequeue_style('woocommerce_fancybox_styles');
         wp_dequeue_style('woocommerce_chosen_styles');
         wp_dequeue_style('woocommerce_prettyPhoto_css');
-        
+
         wp_dequeue_script('wc_price_slider');
         wp_dequeue_script('wc-single-product');
         wp_dequeue_script('wc-add-to-cart');

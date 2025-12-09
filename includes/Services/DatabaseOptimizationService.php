@@ -94,7 +94,11 @@ class DatabaseOptimizationService implements ServiceInterface
         global $wpdb;
 
         $sql = $wpdb->prepare(
-            "DELETE FROM {$wpdb->posts} WHERE post_type = %s",
+            "DELETE a, b, c
+            FROM {$wpdb->posts} a
+            LEFT JOIN {$wpdb->term_relationships} b ON (a.ID = b.object_id)
+            LEFT JOIN {$wpdb->postmeta} c ON (a.ID = c.post_id)
+            WHERE a.post_type = %s",
             'revision'
         );
 
@@ -106,7 +110,11 @@ class DatabaseOptimizationService implements ServiceInterface
         global $wpdb;
 
         $sql = $wpdb->prepare(
-            "DELETE FROM {$wpdb->posts} WHERE post_status = %s",
+            "DELETE a, b, c
+            FROM {$wpdb->posts} a
+            LEFT JOIN {$wpdb->term_relationships} b ON (a.ID = b.object_id)
+            LEFT JOIN {$wpdb->postmeta} c ON (a.ID = c.post_id)
+            WHERE a.post_status = %s",
             'auto-draft'
         );
 
@@ -120,7 +128,12 @@ class DatabaseOptimizationService implements ServiceInterface
 
         // Trash posts
         $sql = $wpdb->prepare(
-            "DELETE FROM {$wpdb->posts} WHERE post_status = %s",
+            "DELETE a, b, c, d
+            FROM {$wpdb->posts} a
+            LEFT JOIN {$wpdb->term_relationships} b ON (a.ID = b.object_id)
+            LEFT JOIN {$wpdb->postmeta} c ON (a.ID = c.post_id)
+            LEFT JOIN {$wpdb->comments} d ON (a.ID = d.comment_post_ID)
+            WHERE a.post_status = %s",
             'trash'
         );
         $count += $wpdb->query($sql);
@@ -138,6 +151,10 @@ class DatabaseOptimizationService implements ServiceInterface
             'trash'
         );
         $count += $wpdb->query($sql);
+
+        // Clean orphaned postmeta (just in case)
+        $sql = "DELETE pm FROM {$wpdb->postmeta} pm LEFT JOIN {$wpdb->posts} wp ON wp.ID = pm.post_id WHERE wp.ID IS NULL";
+        $wpdb->query($sql);
 
         return $count;
     }

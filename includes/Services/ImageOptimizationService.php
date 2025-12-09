@@ -135,14 +135,18 @@ class ImageOptimizationService implements ServiceInterface
                 $img->strip();
             }
 
-            $success = $img->writeImage($out);
+            $img->writeImage($out);
             $img->clear();
             $img->destroy();
 
-            if ($success && file_exists($out) && filesize($out) < 100) {
+            clearstatcache(true, $out);
+            if (file_exists($out) && filesize($out) < 100) {
                 @unlink($out);
             }
-        } catch (Exception $e) { /* silent */
+        } catch (Exception $e) {
+            if (file_exists($out)) {
+                @unlink($out);
+            }
         }
     }
 
@@ -446,19 +450,32 @@ class ImageOptimizationService implements ServiceInterface
         $deleted = 0;
         $errors = 0;
         $total_freed = 0;
+        
+        if (!is_dir($base_dir)) {
+            wp_send_json_error('Uploads directory not found');
+        }
+
         try {
             $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base_dir, RecursiveDirectoryIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
             foreach ($iterator as $file) {
-                if ($file->isFile() && strtolower($file->getExtension()) === 'avif') {
-                    $size = $file->getSize();
-                    if ($size < 100) {
-                        if (@unlink($file->getPathname())) {
-                            $deleted++;
-                            $total_freed += $size;
-                        } else {
-                            $errors++;
+                try {
+                    if ($file->isFile() && strtolower($file->getExtension()) === 'avif') {
+                        $path = $file->getPathname();
+                        clearstatcache(true, $path);
+                        $size = $file->getSize();
+                        
+                        // Delete if 0 bytes or very small (< 100 bytes is essentially empty for AVIF)
+                        if ($size < 100) {
+                            if (@unlink($path)) {
+                                $deleted++;
+                                $total_freed += $size;
+                            } else {
+                                $errors++;
+                            }
                         }
                     }
+                } catch (Exception $inner_e) {
+                    continue;
                 }
             }
         } catch (Exception $e) {
