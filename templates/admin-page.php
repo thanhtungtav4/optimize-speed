@@ -18,12 +18,13 @@ $options = get_option('optimize_speed_settings', []);
     </nav>
 
     <!-- Tab Content -->
-    <div class="tab-content">
-        <!-- Bloat Removal Tab -->
-        <div id="bloat-removal" class="tab-pane active">
-            <form method="post" action="options.php" class="optimize-form">
-                <?php settings_fields('optimize_speed_group'); ?>
+    <!-- Tab Content -->
+    <form method="post" action="options.php" class="optimize-form">
+        <?php settings_fields('optimize_speed_group'); ?>
 
+        <div class="tab-content">
+            <!-- Bloat Removal Tab -->
+            <div id="bloat-removal" class="tab-pane active">
                 <div class="settings-section">
                     <h2>Bloat Removal Options</h2>
                     <p class="description">Enable the optimizations you need. Each option removes unnecessary WordPress
@@ -75,15 +76,11 @@ $options = get_option('optimize_speed_settings', []);
                     </div>
                 </div>
 
-                <?php submit_button('Save Bloat Removal Settings'); ?>
-            </form>
-        </div>
+                <?php submit_button('Save Settings'); ?>
+            </div>
 
-        <!-- Partytown Tab -->
-        <div id="partytown" class="tab-pane">
-            <form method="post" action="options.php" class="optimize-form">
-                <?php settings_fields('optimize_speed_group'); ?>
-
+            <!-- Partytown Tab -->
+            <div id="partytown" class="tab-pane">
                 <div class="settings-section">
                     <h2>Partytown Integrations</h2>
                     <p class="description">Configure third-party script tracking IDs to load via Partytown (off main
@@ -118,63 +115,59 @@ $options = get_option('optimize_speed_settings', []);
                     </div>
                 </div>
 
-                <?php submit_button('Save Partytown Settings'); ?>
-            </form>
-        </div>
-
-        <!-- Database Optimization Tab -->
-        <div id="database" class="tab-pane">
-            <div class="settings-section">
-                <h2>Database Optimization Tools</h2>
-                <p class="description">Clean up your database to reduce size and improve performance.</p>
-
-                <div class="db-tools-grid">
-                    <button type="button" class="db-tool-card" data-action="transients">
-                        <span class="dashicons dashicons-update"></span>
-                        <strong>Clean Expired Transients</strong>
-                        <small>Remove expired cached data</small>
-                    </button>
-
-                    <button type="button" class="db-tool-card" data-action="all_transients">
-                        <span class="dashicons dashicons-trash"></span>
-                        <strong>Clean All Transients</strong>
-                        <small>Remove all transient cache</small>
-                    </button>
-
-                    <button type="button" class="db-tool-card" data-action="revisions">
-                        <span class="dashicons dashicons-backup"></span>
-                        <strong>Clean Post Revisions</strong>
-                        <small>Remove old post revisions</small>
-                    </button>
-
-                    <button type="button" class="db-tool-card" data-action="auto_drafts">
-                        <span class="dashicons dashicons-media-document"></span>
-                        <strong>Clean Auto Drafts</strong>
-                        <small>Remove auto-saved drafts</small>
-                    </button>
-
-                    <button type="button" class="db-tool-card" data-action="trash_spam">
-                        <span class="dashicons dashicons-dismiss"></span>
-                        <strong>Clean Trash & Spam</strong>
-                        <small>Empty trash and remove spam</small>
-                    </button>
-
-                    <button type="button" class="db-tool-card primary" data-action="optimize_tables">
-                        <span class="dashicons dashicons-performance"></span>
-                        <strong>Optimize Tables</strong>
-                        <small>Optimize database tables</small>
-                    </button>
-                </div>
-
-                <div id="db-optimization-result"></div>
+                <?php submit_button('Save Settings'); ?>
             </div>
-        </div>
 
-        <!-- Performance Tab -->
-        <div id="performance" class="tab-pane">
-            <form method="post" action="options.php" class="optimize-form">
-                <?php settings_fields('optimize_speed_group'); ?>
+            <!-- Database Optimization Tab -->
+            <div id="database" class="tab-pane">
+                <div class="settings-section">
+                    <h2>Database Optimization Tools</h2>
+                    <p class="description">Clean up your database to reduce size and improve performance.</p>
 
+                    <div class="db-tools-grid">
+                        <button type="button" class="db-tool-card" data-action="transients">
+                            <span class="dashicons dashicons-update"></span>
+                            <strong>Clean Expired Transients</strong>
+                            <small>Remove expired cached data</small>
+                        </button>
+
+                        <button type="button" class="db-tool-card" data-action="all_transients">
+                            <span class="dashicons dashicons-trash"></span>
+                            <strong>Clean All Transients</strong>
+                            <small>Remove all transient cache</small>
+                        </button>
+
+                        <button type="button" class="db-tool-card" data-action="revisions">
+                            <span class="dashicons dashicons-backup"></span>
+                            <strong>Clean Post Revisions</strong>
+                            <small>Remove old post revisions</small>
+                        </button>
+
+                        <button type="button" class="db-tool-card" data-action="auto_drafts">
+                            <span class="dashicons dashicons-media-document"></span>
+                            <strong>Clean Auto Drafts</strong>
+                            <small>Remove auto-saved drafts</small>
+                        </button>
+
+                        <button type="button" class="db-tool-card" data-action="trash_spam">
+                            <span class="dashicons dashicons-dismiss"></span>
+                            <strong>Clean Trash & Spam</strong>
+                            <small>Empty trash and remove spam</small>
+                        </button>
+
+                        <button type="button" class="db-tool-card primary" data-action="optimize_tables">
+                            <span class="dashicons dashicons-performance"></span>
+                            <strong>Optimize Tables</strong>
+                            <small>Optimize database tables</small>
+                        </button>
+                    </div>
+
+                    <div id="db-optimization-result"></div>
+                </div>
+            </div>
+
+            <!-- Performance Tab -->
+            <div id="performance" class="tab-pane">
                 <div class="settings-section">
                     <h2>Advanced Performance</h2>
                     <p class="description">Boost your Core Web Vitals with these advanced optimizations.</p>
@@ -229,27 +222,24 @@ $options = get_option('optimize_speed_settings', []);
                     </div>
                 </div>
 
-                <?php submit_button('Save Performance Settings'); ?>
-            </form>
-        </div>
+                <?php submit_button('Save Settings'); ?>
+            </div>
 
-        <!-- Image Optimization Tab -->
-        <div id="images" class="tab-pane">
-            <div class="settings-section">
-                <h2>Image Optimization Status</h2>
-                <p><strong>Native Image Optimization</strong> is active.</p>
-                <p><strong>Features:</strong></p>
-                <ul>
-                    <li>Native Lazy Loading (loading="lazy")</li>
-                    <li>LCP Optimization (fetchpriority="high")</li>
-                    <li>Auto WebP/AVIF generation</li>
-                </ul>
+            <!-- Image Optimization Tab -->
+            <div id="images" class="tab-pane">
+                <div class="settings-section">
+                    <h2>Image Optimization Status</h2>
+                    <p><strong>Native Image Optimization</strong> is active.</p>
+                    <p><strong>Features:</strong></p>
+                    <ul>
+                        <li>Native Lazy Loading (loading="lazy")</li>
+                        <li>LCP Optimization (fetchpriority="high")</li>
+                        <li>Auto WebP/AVIF generation</li>
+                    </ul>
 
-                <hr style="margin: 20px 0;">
+                    <hr style="margin: 20px 0;">
 
-                <h3>Configuration</h3>
-                <form method="post" action="options.php" class="optimize-form">
-                    <?php settings_fields('optimize_speed_group'); ?>
+                    <h3>Configuration</h3>
                     <div class="bloat-removal-grid" style="grid-template-columns: 1fr;">
                         <?php
                         $current_mode = isset($options['image_opt_mode']) ? $options['image_opt_mode'] : 'native';
@@ -272,61 +262,64 @@ $options = get_option('optimize_speed_settings', []);
                             </span>
                         </label>
                     </div>
-                    <?php submit_button('Save Image Settings'); ?>
-                </form>
+                    <?php submit_button('Save Settings'); ?>
 
-                <hr style="margin: 20px 0;">
+                    <hr style="margin: 20px 0;">
 
-                <h3>Regenerate Images</h3>
-                <p>Total Images (JPEG/PNG): <strong id="total-count">loading...</strong></p>
+                    <h3>Regenerate Images</h3>
+                    <p>Total Images (JPEG/PNG): <strong id="total-count">loading...</strong></p>
 
-                <p>
-                    <strong>AVIF Status:</strong>
-                    <?php
-                    $avif_support = false;
-                    if (class_exists('Imagick')) {
-                        $formats = Imagick::queryFormats();
-                        if (in_array('AVIF', $formats) && in_array('HEIF', $formats)) {
-                            $avif_support = true;
+                    <p>
+                        <strong>AVIF Status:</strong>
+                        <?php
+                        $avif_support = false;
+                        if (class_exists('Imagick')) {
+                            $formats = Imagick::queryFormats();
+                            if (in_array('AVIF', $formats) && in_array('HEIF', $formats)) {
+                                $avif_support = true;
+                            }
                         }
-                    }
-                    if ($avif_support): ?>
-                        <span style="color:#00a32a">✅ Active</span>
-                    <?php else: ?>
-                        <span style="color:#d63638">❌ Not Supported</span>
-                    <?php endif; ?>
-                    &nbsp;
-                    <a href="<?php echo wp_nonce_url(add_query_arg('reset_avif_test', '1'), 'reset_avif_test'); ?>"
-                        class="button button-small">Test Again</a>
-                    &nbsp;
-                    <button id="cleanup-avif-btn" class="button button-small"
-                        style="background:#ff9800;color:#fff;border-color:#f57c00">
-                        🗑️ Cleanup Bad AVIF
-                    </button>
-                </p>
+                        if ($avif_support): ?>
+                            <span style="color:#00a32a">✅ Active</span>
+                        <?php else: ?>
+                            <span style="color:#d63638">❌ Not Supported</span>
+                        <?php endif; ?>
+                        &nbsp;
+                        <a href="<?php echo wp_nonce_url(add_query_arg('reset_avif_test', '1'), 'reset_avif_test'); ?>"
+                            class="button button-small">Test Again</a>
+                        &nbsp;
+                        <button id="cleanup-avif-btn" type="button" class="button button-small"
+                            style="background:#ff9800;color:#fff;border-color:#f57c00">
+                            🗑️ Cleanup Bad AVIF
+                        </button>
+                    </p>
 
-                <p>
-                    <button id="start-btn" class="button button-primary button-large">Start Regenerate</button>
-                    <button id="pause-btn" class="button button-secondary" style="display:none">Pause</button>
-                    <button id="resume-btn" class="button button-secondary" style="display:none">Resume</button>
-                </p>
+                    <p>
+                        <button id="start-btn" type="button" class="button button-primary button-large">Start
+                            Regenerate</button>
+                        <button id="pause-btn" type="button" class="button button-secondary"
+                            style="display:none">Pause</button>
+                        <button id="resume-btn" type="button" class="button button-secondary"
+                            style="display:none">Resume</button>
+                    </p>
 
-                <div id="progress-container" style="margin:25px 0;display:none">
-                    <div style="background:#ddd;height:40px;border-radius:8px;position:relative;overflow:hidden">
-                        <div id="progress-bar" style="background:#2271b1;width:0%;height:100%"></div>
-                        <div style="position:absolute;top:10px;left:15px;color:#fff;font-weight:bold">
-                            <span id="processed">0</span> / <span id="total">0</span> (<span id="percent">0</span>%)
+                    <div id="progress-container" style="margin:25px 0;display:none">
+                        <div style="background:#ddd;height:40px;border-radius:8px;position:relative;overflow:hidden">
+                            <div id="progress-bar" style="background:#2271b1;width:0%;height:100%"></div>
+                            <div style="position:absolute;top:10px;left:15px;color:#fff;font-weight:bold">
+                                <span id="processed">0</span> / <span id="total">0</span> (<span id="percent">0</span>%)
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="log"
-                    style="background:#1d2327;color:#0f0;padding:15px;height:200px;overflow-y:auto;font-family:monospace;border:1px solid #333;border-radius:4px;font-size:13px">
-                    Ready...
+                    <div id="log"
+                        style="background:#1d2327;color:#0f0;padding:15px;height:200px;overflow-y:auto;font-family:monospace;border:1px solid #333;border-radius:4px;font-size:13px">
+                        Ready...
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
 
 <script>
