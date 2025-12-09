@@ -63,6 +63,11 @@ class AdminService implements ServiceInterface
                 ['disable_heartbeat', 'Disable Heartbeat API', 'Completely disable'],
                 ['disable_dns_prefetch', 'Disable DNS Prefetch', 'Remove resource hints'],
                 ['defer_javascript', 'Defer JavaScript', 'Add defer to scripts'],
+                ['delay_javascript', 'Delay JavaScript Execution', 'Delay until user interaction (Click, Scroll, Move)'],
+                ['delay_javascript_keywords', 'Delay JS Keywords', 'One per line. Handle or filename.'],
+                ['lazyload_iframes', 'Lazy Load Iframes/Videos', 'Replace YouTube/Vimeo with thumbnail facade'],
+                ['local_google_fonts', 'Local Google Fonts', 'Download and serve Google Fonts locally'],
+                ['preload_resources', 'Preload Resources', 'One URL per line'],
 
                 // Security & API
                 ['disable_rest_api', 'Disable REST API', 'Restrict to logged-in users'],

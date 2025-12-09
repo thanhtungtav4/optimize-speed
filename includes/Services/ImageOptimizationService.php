@@ -28,6 +28,9 @@ class ImageOptimizationService implements ServiceInterface
         add_filter('render_block', [$this, 'process_block_content'], 10, 2);
         add_action('delete_attachment', [$this, 'cleanup']);
 
+        // Background Processing
+        add_action('optimize_speed_process_image_background', [$this, 'process_background_queue'], 10, 2);
+
         // AJAX
         add_action('wp_ajax_modern_opti_queue', [$this, 'ajax_get_queue']);
         add_action('wp_ajax_modern_opti_regen', [$this, 'ajax_regenerate_single']);
@@ -63,9 +66,26 @@ class ImageOptimizationService implements ServiceInterface
     {
         if (!wp_attachment_is_image($id))
             return $metadata;
+
+        // Schedule background processing
+        // We trigger it slightly in the future (e.g. 5 seconds) or immediately to let the current request finish saving metadata
+        if (!wp_next_scheduled('optimize_speed_process_image_background', [$id, $metadata])) {
+            wp_schedule_single_event(time() + 2, 'optimize_speed_process_image_background', [$id, $metadata]);
+        }
+
+        return $metadata;
+    }
+
+    public function process_background_queue($id, $metadata)
+    {
+        $this->process_image($id, $metadata);
+    }
+
+    public function process_image($id, $metadata)
+    {
         $file = get_attached_file($id);
         if (!$file || !file_exists($file))
-            return $metadata;
+            return;
 
         $dir = dirname($file);
         $files = [$file];
@@ -83,7 +103,6 @@ class ImageOptimizationService implements ServiceInterface
             $this->create_webp($f);
             $this->create_avif($f);
         }
-        return $metadata;
     }
 
     private function create_webp($file)
@@ -558,7 +577,7 @@ class ImageOptimizationService implements ServiceInterface
         try {
             $meta = wp_get_attachment_metadata($id);
             if ($meta) {
-                $this->generate_optimized($meta, $id);
+                $this->process_image($id, $meta);
                 wp_send_json_success(['id' => $id]);
             } else {
                 wp_send_json_error('No metadata');

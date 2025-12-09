@@ -170,6 +170,69 @@ $options = get_option('optimize_speed_settings', []);
             </div>
         </div>
 
+        <!-- Performance Tab -->
+        <div id="performance" class="tab-pane">
+            <form method="post" action="options.php" class="optimize-form">
+                <?php settings_fields('optimize_speed_group'); ?>
+
+                <div class="settings-section">
+                    <h2>Advanced Performance</h2>
+                    <p class="description">Boost your Core Web Vitals with these advanced optimizations.</p>
+
+                    <div class="bloat-removal-grid">
+                        <?php
+                        $config = OptimizeSpeed\Services\AdminService::get_settings_config();
+                        // Filter for performance keys
+                        $perf_keys = [
+                            'lazyload_iframes',
+                            'delay_javascript',
+                            'delay_javascript_keywords',
+                            'local_google_fonts',
+                            'preload_resources',
+                            'disable_dns_prefetch',
+                            'defer_javascript'
+                        ];
+
+                        foreach ($config['bloat_removal'] as $field) {
+                            [$key, $label, $description] = $field;
+                            if (!in_array($key, $perf_keys))
+                                continue;
+
+                            $value = isset($options[$key]) ? $options[$key] : '';
+
+                            if ($key === 'delay_javascript_keywords' || $key === 'preload_resources') {
+                                ?>
+                                <div class="option-card" style="grid-column: span 2;">
+                                    <span class="option-content">
+                                        <span class="option-title"><?php echo esc_html($label); ?></span>
+                                        <span class="option-desc"><?php echo esc_html($description); ?></span>
+                                        <textarea name="optimize_speed_settings[<?php echo esc_attr($key); ?>]" rows="5"
+                                            class="large-text code"
+                                            style="margin-top:10px;"><?php echo esc_textarea($value); ?></textarea>
+                                    </span>
+                                </div>
+                                <?php
+                            } else {
+                                ?>
+                                <label class="option-card">
+                                    <input type="checkbox" name="optimize_speed_settings[<?php echo esc_attr($key); ?>]"
+                                        value="1" <?php checked(1, $value); ?>>
+                                    <span class="option-content">
+                                        <span class="option-title"><?php echo esc_html($label); ?></span>
+                                        <span class="option-desc"><?php echo esc_html($description); ?></span>
+                                    </span>
+                                </label>
+                                <?php
+                            }
+                        }
+                        ?>
+                    </div>
+                </div>
+
+                <?php submit_button('Save Performance Settings'); ?>
+            </form>
+        </div>
+
         <!-- Image Optimization Tab -->
         <div id="images" class="tab-pane">
             <div class="settings-section">
