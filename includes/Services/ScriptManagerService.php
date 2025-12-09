@@ -254,14 +254,29 @@ class ScriptManagerService implements ServiceInterface
         return null;
     }
 
-    private function has_active_delay_rules()
+    /**
+     * Check if a handle is protected and should not be modified/optimized.
+     */
+    private function is_protected_handle($handle)
     {
-        if (isset($this->page_rules['js'])) {
-            // Need to check strategy prop now
-            foreach ($this->page_rules['js'] as $rule) {
-                if (isset($rule['strategy']) && $rule['strategy'] === 'delay') {
-                    return true;
-                }
+        // Whitelist critical scripts if Admin Bar is showing
+        if (is_admin_bar_showing()) {
+            $critical_handles = [
+                'admin-bar',
+                'wp-core-commands',
+                'wp-commands',
+                'wp-i18n',
+                'wp-dom-ready',
+                'wp-a11y',
+                'dashicons',
+                'common',
+                'hoverIntent',
+                'hoverintent-js',
+                'wp-url',
+                'wp-hooks',
+            ];
+            if (in_array($handle, $critical_handles)) {
+                return true;
             }
         }
         return false;
@@ -271,33 +286,12 @@ class ScriptManagerService implements ServiceInterface
 
     public function dequeue_assets()
     {
-        // Must iterate REGISTERED scripts/styles to match regex rules
-        // But WP doesn't expose an easy "Iterate all enqueued" hook that gives us the list to modify in place easily?
-        // Actually wp_dequeue_script works if it's enqueued.
-
-        // We can iterate rules. If exact, straightforward. 
-        // If Regex, we must iterate ALL items in queue.
-
         // Strategy: Iterate Queue
         global $wp_scripts, $wp_styles;
 
-        // Safeguard: Whitelist critical scripts if Admin Bar is showing
-        $whitelisted_handles = [];
-        if (is_admin_bar_showing()) {
-            $whitelisted_handles = [
-                'admin-bar',
-                'wp-core-commands',
-                'dashicons',
-                'common',
-                'wp-i18n',
-                'hoverIntent',
-                'hoverintent-js'
-            ];
-        }
-
         if ($wp_scripts && !empty($wp_scripts->queue)) {
             foreach ($wp_scripts->queue as $handle) {
-                if (in_array($handle, $whitelisted_handles)) {
+                if ($this->is_protected_handle($handle)) {
                     continue;
                 }
 
@@ -311,6 +305,10 @@ class ScriptManagerService implements ServiceInterface
 
         if ($wp_styles && !empty($wp_styles->queue)) {
             foreach ($wp_styles->queue as $handle) {
+                if ($this->is_protected_handle($handle)) {
+                    continue;
+                }
+
                 $rule = $this->get_rule_for_handle($handle, 'css');
                 if ($rule && $rule['strategy'] === 'disable') {
                     wp_dequeue_style($handle);
@@ -324,6 +322,10 @@ class ScriptManagerService implements ServiceInterface
 
     public function filter_script_loader_tag($tag, $handle, $src)
     {
+        if ($this->is_protected_handle($handle)) {
+            return $tag;
+        }
+
         $rule = $this->get_rule_for_handle($handle, 'js');
         if ($rule) {
             $strategy = $rule['strategy'];
@@ -338,6 +340,10 @@ class ScriptManagerService implements ServiceInterface
 
     public function filter_style_loader_tag($tag, $handle, $src)
     {
+        if ($this->is_protected_handle($handle)) {
+            return $tag;
+        }
+
         $rule = $this->get_rule_for_handle($handle, 'css');
         if ($rule) {
             $strategy = $rule['strategy'];
@@ -354,6 +360,10 @@ class ScriptManagerService implements ServiceInterface
 
     public function global_defer_js($tag, $handle, $src)
     {
+        if ($this->is_protected_handle($handle)) {
+            return $tag;
+        }
+
         // Don't defer if already async or deferred by rule
         if (strpos($tag, 'defer') !== false || strpos($tag, 'async') !== false) {
             return $tag;
