@@ -266,7 +266,6 @@ $options = get_option('optimize_speed_settings', []);
                                     $pt_js[] = ['slug' => $pt->name, 'label' => $pt->label];
                                 }
                             }
-
                             // Fetch page templates
                             $templates = get_page_templates(null, 'page');
                             if (empty($templates)) {
@@ -293,7 +292,7 @@ $options = get_option('optimize_speed_settings', []);
                                 $rule_target = isset($rule['target']) ? $rule['target'] : 'global';
                                 $custom_id = isset($rule['custom_id']) ? $rule['custom_id'] : '';
 
-                                // Determine visibility
+                                // Logic to determine which input to show
                                 $show_custom = ($rule_target === 'custom');
                                 $show_post_type = ($rule_target === 'post_type');
                                 $show_template = ($rule_target === 'page_template');
@@ -303,16 +302,15 @@ $options = get_option('optimize_speed_settings', []);
                                         <select
                                             name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][target]"
                                             class="rule-target-select" style="width:100%">
-                                            <option value="global" <?php selected($rule_target, 'global'); ?>>Global (All
-                                                Pages)</option>
+                                            <option value="global" <?php selected($rule_target, 'global'); ?>>Global
+                                            </option>
                                             <option value="homepage" <?php selected($rule_target, 'homepage'); ?>>Homepage
                                             </option>
-                                            <option value="custom" <?php selected($rule_target, 'custom'); ?>>Specific Page
-                                                ID</option>
-                                            <option value="post_type" <?php selected($rule_target, 'post_type'); ?>>Specific
-                                                Post Type</option>
+                                            <option value="custom" <?php selected($rule_target, 'custom'); ?>>ID</option>
+                                            <option value="post_type" <?php selected($rule_target, 'post_type'); ?>>Post
+                                                Type</option>
                                             <option value="page_template" <?php selected($rule_target, 'page_template'); ?>>
-                                                Specific Page Template</option>
+                                                Template</option>
                                         </select>
 
                                         <!-- ID Input -->
@@ -348,7 +346,7 @@ $options = get_option('optimize_speed_settings', []);
                                             <?php endforeach; ?>
                                         </select>
 
-                                        <!-- Hidden consolidated field to store final 'custom_id' -->
+                                        <!-- Hidden consolidated field -->
                                         <input type="hidden" class="final-custom-id"
                                             name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id]"
                                             value="<?php echo esc_attr($custom_id); ?>">
@@ -359,46 +357,57 @@ $options = get_option('optimize_speed_settings', []);
                                             name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][handle]"
                                             value="<?php echo esc_attr(isset($rule['handle']) ? $rule['handle'] : ''); ?>"
                                             style="width:100%" placeholder="e.g. jquery">
-                                        <label style="display:block; margin-top:4px; font-size:12px;">
-                                            <input type="checkbox" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][is_regex]" value="1" <?php checked(isset($rule['is_regex']) ? $rule['is_regex'] : 0, 1); ?>> 
-                                            Regex Match
-                                        </label>
+
+                                        <!-- Advanced Options Toggle -->
+                                        <div class="advanced-opts-toggle"
+                                            style="margin-top:5px; font-size:11px; color:#0073aa; cursor:pointer;">
+                                            <span class="dashicons dashicons-admin-settings"
+                                                style="font-size:12px; height:12px; width:12px;"></span> Advanced
+                                        </div>
+                                        <div class="advanced-opts"
+                                            style="display:none; margin-top:5px; padding:5px; background:#f0f0f1; border-radius:3px;">
+                                            <label style="display:block; font-size:11px;">
+                                                <input type="checkbox"
+                                                    name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][is_regex]"
+                                                    value="1" <?php checked(isset($rule['is_regex']) ? $rule['is_regex'] : 0, 1); ?>>
+                                                Regex Match
+                                            </label>
+                                        </div>
                                     </td>
                                     <td>
                                         <select
                                             name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][type]"
                                             style="width:100%">
-                                            <option value="js" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'js'); ?>>JavaScript (JS)</option>
-                                            <option value="css" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'css'); ?>>CSS Style</option>
+                                            <option value="js" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'js'); ?>>JS</option>
+                                            <option value="css" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'css'); ?>>CSS</option>
                                         </select>
                                     </td>
                                     <td>
                                         <select
                                             name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][strategy]"
-                                            class="rule-strategy-select"
-                                            style="width:100%">
+                                            class="rule-strategy-select" style="width:100%">
                                             <option value="async" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'async'); ?>>Async</option>
                                             <option value="defer" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'defer'); ?>>Defer</option>
-                                            <option value="delay" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'delay'); ?>>Delay (Interaction)</option>
-                                            <option value="preload" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'preload'); ?>>Preload (Head)</option>
-                                            <option value="disable" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'disable'); ?>>Disable (Dequeue)</option>
+                                            <option value="delay" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'delay'); ?>>Delay</option>
+                                            <option value="preload" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'preload'); ?>>Preload</option>
+                                            <option value="disable" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'disable'); ?>>Disable</option>
                                         </select>
-                                        <label class="crossorigin-opt" style="display:<?php echo (isset($rule['strategy']) && $rule['strategy'] === 'preload') ? 'block' : 'none'; ?>; margin-top:4px; font-size:12px;">
-                                            <input type="checkbox" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][crossorigin]" value="1" <?php checked(isset($rule['crossorigin']) ? $rule['crossorigin'] : 0, 1); ?>>
+                                        <label class="crossorigin-opt"
+                                            style="display:<?php echo (isset($rule['strategy']) && $rule['strategy'] === 'preload') ? 'block' : 'none'; ?>; margin-top:4px; font-size:11px;">
+                                            <input type="checkbox"
+                                                name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][crossorigin]"
+                                                value="1" <?php checked(isset($rule['crossorigin']) ? $rule['crossorigin'] : 0, 1); ?>>
                                             Crossorigin
                                         </label>
                                     </td>
                                     <td>
-                                        <button type="button" class="button remove-rule-btn">Remove</button>
+                                        <button type="button" class="button remove-rule-btn"><span
+                                                class="dashicons dashicons-trash"></span></button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
-
-                    <p>
-                        <button type="button" class="button button-primary" id="add-rule-btn">Add New Rule</button>
-                    </p>
                 </div>
 
                 <?php submit_button('Save Settings'); ?>

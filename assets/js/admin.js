@@ -91,105 +91,197 @@ jQuery(document).ready(function ($) {
 
     // --- Script Manager Rules Engine Logic ---
 
-    // 1. Add New Rule
-    $('#add-rule-btn').on('click', function () {
+    // 1. Rule Creator Logic: Toggle Target Details
+    $('#new-rule-target').on('change', function () {
+        var val = $(this).val();
+        $('#new-rule-target-details').children().hide();
+        var detailsDiv = $('#new-rule-target-details');
+
+        if (val === 'custom') {
+            $('#new-rule-custom-id').show();
+        } else if (val === 'post_type') {
+            $('#new-rule-post-type').show();
+        } else if (val === 'page_template') {
+            $('#new-rule-page-template').show();
+        }
+    });
+
+    // 2. Rule Creator Logic: Toggle Crossorigin
+    $('#new-rule-strategy').on('change', function () {
+        if ($(this).val() === 'preload') {
+            $('#new-rule-crossorigin-wrapper').show();
+        } else {
+            $('#new-rule-crossorigin-wrapper').hide();
+        }
+    });
+
+    // 3. Add Rule Action (Top Button)
+    $('#add-rule-btn-top').on('click', function () {
         var tbody = $('#rules-tbody');
         var newIndex = new Date().getTime();
 
-        // Build Select Options from osData
+        // Gather values from Top Creator
+        var targetStart = $('#new-rule-target').val();
+        var handle = $('#new-rule-handle').val();
+        var isRegex = $('#new-rule-regex').is(':checked') ? 1 : 0;
+        var type = $('#new-rule-type').val();
+        var strategy = $('#new-rule-strategy').val();
+        var isCrossorigin = $('#new-rule-crossorigin').is(':checked') ? 1 : 0;
+
+        // Custom ID logic
+        var customId = '';
+        if (targetStart === 'custom') {
+            customId = $('#new-rule-custom-id').val();
+        } else if (targetStart === 'post_type') {
+            customId = $('#new-rule-post-type').val();
+        } else if (targetStart === 'page_template') {
+            customId = $('#new-rule-page-template').val();
+        }
+
+        if (!handle) {
+            alert('Please enter a handle.');
+            return;
+        }
+
+        // Build Select Options from osData for the Row (in case they want to edit later)
         var postTypesOpts = '<option value="">Select Post Type</option>';
         if (window.osData && window.osData.post_types) {
             window.osData.post_types.forEach(function (pt) {
-                postTypesOpts += '<option value="' + pt.slug + '">' + pt.label + '</option>';
+                var sel = (targetStart === 'post_type' && customId === pt.slug) ? 'selected' : '';
+                postTypesOpts += '<option value="' + pt.slug + '" ' + sel + '>' + pt.label + '</option>';
             });
         }
 
         var templatesOpts = '<option value="default">Default Template</option>';
         if (window.osData && window.osData.templates) {
             window.osData.templates.forEach(function (tpl) {
-                templatesOpts += '<option value="' + tpl.file + '">' + tpl.name + '</option>';
+                var sel = (targetStart === 'page_template' && customId === tpl.file) ? 'selected' : '';
+                templatesOpts += '<option value="' + tpl.file + '" ' + sel + '>' + tpl.name + '</option>';
             });
         }
+
+        // Visibility vars for the row inputs
+        var showCustom = (targetStart === 'custom') ? 'block' : 'none';
+        var showPostType = (targetStart === 'post_type') ? 'block' : 'none';
+        var showTemplate = (targetStart === 'page_template') ? 'block' : 'none';
+
+        var typeJsSel = (type === 'js') ? 'selected' : '';
+        var typeCssSel = (type === 'css') ? 'selected' : '';
+
+        var stratAsync = (strategy === 'async') ? 'selected' : '';
+        var stratDefer = (strategy === 'defer') ? 'selected' : '';
+        var stratDelay = (strategy === 'delay') ? 'selected' : '';
+        var stratPreload = (strategy === 'preload') ? 'selected' : '';
+        var stratDisable = (strategy === 'disable') ? 'selected' : '';
+
+        var crossStyle = (strategy === 'preload') ? 'block' : 'none';
+        var crossChecked = (isCrossorigin) ? 'checked' : '';
+
+        var regexChecked = (isRegex) ? 'checked' : '';
+
+        // Target Select Options
+        var tgGlobal = (targetStart === 'global') ? 'selected' : '';
+        var tgHome = (targetStart === 'homepage') ? 'selected' : '';
+        var tgCustom = (targetStart === 'custom') ? 'selected' : '';
+        var tgPt = (targetStart === 'post_type') ? 'selected' : '';
+        var tgTpl = (targetStart === 'page_template') ? 'selected' : '';
+
 
         var rowHtml = `
             <tr class="rule-row">
                 <td>
                     <select name="optimize_speed_settings[script_manager_rules][${newIndex}][target]" class="rule-target-select" style="width:100%">
-                        <option value="global">Global (All Pages)</option>
-                        <option value="homepage">Homepage</option>
-                        <option value="custom">Specific Page ID</option>
-                        <option value="post_type">Specific Post Type</option>
-                        <option value="page_template">Specific Page Template</option>
+                        <option value="global" ${tgGlobal}>Global</option>
+                        <option value="homepage" ${tgHome}>Homepage</option>
+                        <option value="custom" ${tgCustom}>ID</option>
+                        <option value="post_type" ${tgPt}>Post Type</option>
+                        <option value="page_template" ${tgTpl}>Template</option>
                     </select>
                     
                     <!-- ID Input -->
                     <input type="number" 
                            name="optimize_speed_settings[script_manager_rules][${newIndex}][custom_id_num]" 
-                           value="" 
+                           value="${(targetStart === 'custom' ? customId : '')}" 
                            placeholder="Page ID" 
-                           style="width:100%; margin-top:5px; display:none;"
+                           style="width:100%; margin-top:5px; display:${showCustom};"
                            class="target-id-input target-input-custom">
                     
                     <!-- Post Type Select -->
                     <select name="optimize_speed_settings[script_manager_rules][${newIndex}][custom_id_type]" 
                             class="target-input-post_type" 
-                            style="width:100%; margin-top:5px; display:none;">
+                            style="width:100%; margin-top:5px; display:${showPostType};">
                         ${postTypesOpts}
                     </select>
 
                     <!-- Template Select -->
                     <select name="optimize_speed_settings[script_manager_rules][${newIndex}][custom_id_tpl]" 
                             class="target-input-page_template" 
-                            style="width:100%; margin-top:5px; display:none;">
+                            style="width:100%; margin-top:5px; display:${showTemplate};">
                         ${templatesOpts}
                     </select>
 
                     <!-- Hidden Final ID -->
-                    <input type="hidden" class="final-custom-id" name="optimize_speed_settings[script_manager_rules][${newIndex}][custom_id]" value="">
+                    <input type="hidden" class="final-custom-id" name="optimize_speed_settings[script_manager_rules][${newIndex}][custom_id]" value="${customId}">
                 </td>
                 <td>
-                    <input type="text" name="optimize_speed_settings[script_manager_rules][${newIndex}][handle]" value="" style="width:100%" placeholder="e.g. jquery, contact-form-7">
-                    <label style="display:block; margin-top:4px; font-size:12px;">
-                        <input type="checkbox" name="optimize_speed_settings[script_manager_rules][${newIndex}][is_regex]" value="1"> 
-                        Regex Match
-                    </label>
+                    <input type="text" name="optimize_speed_settings[script_manager_rules][${newIndex}][handle]" value="${handle}" style="width:100%" placeholder="e.g. jquery">
+                    
+                    <div class="advanced-opts-toggle" style="margin-top:5px; font-size:11px; color:#0073aa; cursor:pointer;">
+                        <span class="dashicons dashicons-admin-settings" style="font-size:12px; height:12px; width:12px;"></span> Advanced
+                    </div>
+                    <div class="advanced-opts" style="display:none; margin-top:5px; padding:5px; background:#f0f0f1; border-radius:3px;">
+                        <label style="display:block; font-size:11px;">
+                            <input type="checkbox" name="optimize_speed_settings[script_manager_rules][${newIndex}][is_regex]" value="1" ${regexChecked}> 
+                            Regex Match
+                        </label>
+                    </div>
                 </td>
                 <td>
                     <select name="optimize_speed_settings[script_manager_rules][${newIndex}][type]" style="width:100%">
-                        <option value="js">JavaScript (JS)</option>
-                        <option value="css">CSS Style</option>
+                        <option value="js" ${typeJsSel}>JS</option>
+                        <option value="css" ${typeCssSel}>CSS</option>
                     </select>
                 </td>
                 <td>
                     <select name="optimize_speed_settings[script_manager_rules][${newIndex}][strategy]" class="rule-strategy-select" style="width:100%">
-                        <option value="async">Async</option>
-                        <option value="defer">Defer</option>
-                        <option value="delay">Delay (Interaction)</option>
-                        <option value="preload">Preload (Head)</option>
-                        <option value="disable">Disable (Dequeue)</option>
+                        <option value="async" ${stratAsync}>Async</option>
+                        <option value="defer" ${stratDefer}>Defer</option>
+                        <option value="delay" ${stratDelay}>Delay</option>
+                        <option value="preload" ${stratPreload}>Preload</option>
+                        <option value="disable" ${stratDisable}>Disable</option>
                     </select>
-                    <label class="crossorigin-opt" style="display:none; margin-top:4px; font-size:12px;">
-                        <input type="checkbox" name="optimize_speed_settings[script_manager_rules][${newIndex}][crossorigin]" value="1">
+                    <label class="crossorigin-opt" style="display:${crossStyle}; margin-top:4px; font-size:11px;">
+                        <input type="checkbox" name="optimize_speed_settings[script_manager_rules][${newIndex}][crossorigin]" value="1" ${crossChecked}>
                         Crossorigin
                     </label>
                 </td>
                 <td>
-                    <button type="button" class="button remove-rule-btn">Remove</button>
+                    <button type="button" class="button remove-rule-btn"><span class="dashicons dashicons-trash"></span></button>
                 </td>
             </tr>
         `;
 
         tbody.append(rowHtml);
+
+        // Reset Inputs
+        $('#new-rule-handle').val('');
+        $('#new-rule-custom-id').val('');
+        $('#new-rule-regex').prop('checked', false);
     });
 
-    // 2. Remove Rule
+    // 4. Remove Rule
     $(document).on('click', '.remove-rule-btn', function () {
         if (confirm('Are you sure?')) {
             $(this).closest('tr').remove();
         }
     });
 
-    // 3. Toggle Target Inputs
+    // 5. Toggle Advanced Options
+    $(document).on('click', '.advanced-opts-toggle', function () {
+        $(this).next('.advanced-opts').toggle();
+    });
+
+    // 6. Toggle Target Inputs (Row level)
     $(document).on('change', '.rule-target-select', function () {
         var val = $(this).val();
         var cell = $(this).closest('td');

@@ -281,8 +281,26 @@ class ScriptManagerService implements ServiceInterface
         // Strategy: Iterate Queue
         global $wp_scripts, $wp_styles;
 
+        // Safeguard: Whitelist critical scripts if Admin Bar is showing
+        $whitelisted_handles = [];
+        if (is_admin_bar_showing()) {
+            $whitelisted_handles = [
+                'admin-bar',
+                'wp-core-commands',
+                'dashicons',
+                'common',
+                'wp-i18n',
+                'hoverIntent',
+                'hoverintent-js'
+            ];
+        }
+
         if ($wp_scripts && !empty($wp_scripts->queue)) {
             foreach ($wp_scripts->queue as $handle) {
+                if (in_array($handle, $whitelisted_handles)) {
+                    continue;
+                }
+
                 $rule = $this->get_rule_for_handle($handle, 'js');
                 if ($rule && $rule['strategy'] === 'disable') {
                     wp_dequeue_script($handle);
