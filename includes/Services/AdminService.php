@@ -199,7 +199,8 @@ class AdminService implements ServiceInterface
         // Localize script with nonce
         wp_localize_script('optimize-speed-admin', 'optimizeSpeedAdmin', [
             'nonce' => wp_create_nonce('optimize_speed_admin_nonce'),
-            'ajaxurl' => admin_url('admin-ajax.php')
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'siteUrl' => home_url()
         ]);
 
         // Enqueue admin CSS
