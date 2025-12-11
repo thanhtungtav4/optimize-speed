@@ -192,7 +192,7 @@ class AdminService implements ServiceInterface
             'optimize-speed-admin',
             plugins_url('assets/js/admin.js', dirname(dirname(__FILE__))),
             ['jquery'],
-            '1.0.4', // Increment version to bust cache
+            '1.0.7', // Increment version to bust cache
             true
         );
 

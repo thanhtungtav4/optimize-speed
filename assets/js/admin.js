@@ -318,6 +318,39 @@ jQuery(document).ready(function ($) {
 
     // --- Visual Asset Scanner ---
 
+    // Helper function to build a scan result row
+    function buildScanRow(item, type) {
+        var handle = item.handle || 'N/A';
+        var src = item.src || 'N/A';
+        var typeLabel = type === 'js' ? 'JS' : 'CSS';
+        var typeClass = type === 'js' ? 'type-js' : 'type-css';
+
+        // Truncate long src for display
+        var srcDisplay = src;
+        if (srcDisplay && srcDisplay.length > 60) {
+            srcDisplay = srcDisplay.substring(0, 57) + '...';
+        }
+
+        var row = '<tr class="scan-row ' + typeClass + '">';
+        row += '<td><strong>' + escapeHtml(handle) + '</strong></td>';
+        row += '<td><span class="asset-type ' + typeClass + '">' + typeLabel + '</span></td>';
+        row += '<td class="src-cell" title="' + escapeHtml(src) + '">' + escapeHtml(srcDisplay) + '</td>';
+        row += '<td>';
+        row += '<button type="button" class="button button-small add-rule-from-scan" data-handle="' + escapeHtml(handle) + '" data-type="' + type + '">Add Rule</button>';
+        row += '</td>';
+        row += '</tr>';
+
+        return row;
+    }
+
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // 1. Toggle Scanner Inputs
     $('#scan-target-type').on('change', function () {
         var val = $(this).val();
@@ -385,9 +418,13 @@ jQuery(document).ready(function ($) {
             scanUrl += '?os_scan_assets=1';
         }
 
-        // Handle relative URLs for display/fetching if needed
         if (scanUrl.indexOf('http') !== 0) {
-            scanUrl = optimizeSpeedAdmin.siteUrl + scanUrl; // rudimentary join
+            var baseUrl = (optimizeSpeedAdmin && optimizeSpeedAdmin.siteUrl) ? optimizeSpeedAdmin.siteUrl : window.location.origin;
+            // Remove trailing slash from base if scanUrl has leading access
+            if (baseUrl.endsWith('/') && scanUrl.startsWith('/')) {
+                baseUrl = baseUrl.slice(0, -1);
+            }
+            scanUrl = baseUrl + scanUrl;
         }
 
         btn.prop('disabled', true);
@@ -397,10 +434,30 @@ jQuery(document).ready(function ($) {
         urlDisplay.text('Scanning: ' + scanUrl);
 
         // Perform Scan (Fetch the frontend page)
-        $.get(scanUrl)
-            .done(function (response) {
+        $.ajax({
+            url: scanUrl,
+            type: 'GET',
+            dataType: 'text', // Get as text first to handle potential trailing content
+            success: function (responseText) {
                 btn.prop('disabled', false);
                 spinner.removeClass('is-active');
+
+                // Try to extract JSON from response even if there's trailing HTML
+                var response;
+                try {
+                    // Find the JSON object in the response (starts with { and ends with })
+                    var jsonMatch = responseText.match(/(\{[\s\S]*\})/);
+                    if (jsonMatch) {
+                        response = JSON.parse(jsonMatch[1]);
+                    } else {
+                        throw new Error('No JSON found in response');
+                    }
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    console.log('Raw response:', responseText);
+                    alert('Scan failed: Could not parse response. Check console for details.');
+                    return;
+                }
 
                 if (response.success) {
                     var assets = response.data;
@@ -431,12 +488,14 @@ jQuery(document).ready(function ($) {
                 } else {
                     alert('Scan failed. Please check if the page exists.');
                 }
-            })
-            .fail(function () {
+            },
+            error: function (xhr, status, error) {
                 $('#scan-spinner').removeClass('is-active');
                 $('#start-scan-btn').prop('disabled', false);
-                alert('Scan request failed.');
-            });
+                console.error('Scan request error:', status, error);
+                alert('Scan request failed: ' + error);
+            }
+        });
     });
 
     $('#clear-scan-btn').on('click', function () {

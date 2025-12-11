@@ -13,6 +13,8 @@ class PartytownService implements ServiceInterface
 
     public function register()
     {
+        // Load options early to ensure they're available for all hooks
+        add_action('init', [$this, 'init_options'], 1);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_partytown_core']);
         add_action('wp_head', [$this, 'print_partytown_config'], 1);
         add_action('wp_body_open', [$this, 'print_partytown_atom'], 1);
@@ -20,9 +22,17 @@ class PartytownService implements ServiceInterface
         add_action('admin_init', [$this, 'check_and_install_assets']);
     }
 
-    public function boot()
+    public function init_options()
     {
         $this->options = get_option(AdminService::OPTION_NAME, []);
+    }
+
+    public function boot()
+    {
+        // Options are now loaded via init hook for proper timing
+        if (empty($this->options)) {
+            $this->options = get_option(AdminService::OPTION_NAME, []);
+        }
     }
 
     public function check_and_install_assets()
@@ -53,7 +63,8 @@ class PartytownService implements ServiceInterface
 
     public function enqueue_partytown_core()
     {
-        if (empty($this->options['enable_partytown']))
+        // Auto-enable if any integration has an ID set
+        if (!$this->has_any_integration())
             return;
 
         $partytown_url = OPTIMIZE_SPEED_URL . 'assets/partytown/';
@@ -73,7 +84,8 @@ class PartytownService implements ServiceInterface
 
     public function print_partytown_config()
     {
-        if (empty($this->options['enable_partytown']))
+        // Auto-enable if any integration has an ID set
+        if (!$this->has_any_integration())
             return;
 
         $partytown_url = OPTIMIZE_SPEED_URL . 'assets/partytown/';
@@ -90,9 +102,31 @@ class PartytownService implements ServiceInterface
 
     public function print_partytown_atom()
     {
-        if (empty($this->options['enable_partytown']))
+        // Auto-enable if any integration has an ID set
+        if (!$this->has_any_integration())
             return;
         echo '<script type="text/partytown">/* Partytown ready */</script>';
+    }
+
+    /**
+     * Check if any integration has an ID configured
+     */
+    private function has_any_integration()
+    {
+        // Ensure options are loaded
+        if (empty($this->options)) {
+            $this->options = get_option(AdminService::OPTION_NAME, []);
+        }
+
+        $config = $this->get_integrations_config();
+        foreach ($config as $integration) {
+            foreach ($integration['keys'] as $key) {
+                if (!empty($this->options[$key])) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private function get_forward_events()
@@ -241,10 +275,10 @@ class PartytownService implements ServiceInterface
             ],
             'tiktok' => [
                 'keys' => ['tiktok', 'tiktok_pixel_id'],
-                'forward' => ['ttq.load', 'ttq.track', 'ttq.page', 'ttq.instance'],
+                'forward' => ['ttq', 'ttq.load', 'ttq.track', 'ttq.page', 'ttq.identify', 'ttq.instance', 'ttq.instances', 'ttq.debug', 'ttq.on', 'ttq.off', 'ttq.once', 'ttq.ready', 'ttq.alias', 'ttq.group', 'ttq.enableCookie', 'ttq.disableCookie'],
                 'partytown' => function ($id) {
                     return [
-                        'external' => "https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=C6RGGFS2I7N4QUB43OL0&lib={$id}",
+                        'external' => "https://analytics.tiktok.com/i18n/pixel/events.js?sdkid={$id}&lib=ttq",
                         'inline' => "!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};};}(window,document,'ttq'); ttq.load('{$id}'); ttq.page();"
                     ];
                 },
