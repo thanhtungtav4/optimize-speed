@@ -244,12 +244,13 @@ jQuery(document).ready(function ($) {
                 </td>
                 <td>
                     <select name="optimize_speed_settings[script_manager_rules][${newIndex}][strategy]" class="rule-strategy-select" style="width:100%">
-                        <option value="async" ${stratAsync}>Async</option>
-                        <option value="defer" ${stratDefer}>Defer</option>
-                        <option value="delay" ${stratDelay}>Delay</option>
-                        <option value="preload" ${stratPreload}>Preload</option>
-                        <option value="disable" ${stratDisable}>Disable</option>
+                        <option value="async" ${stratAsync} title="Load in parallel, execute immediately when ready">Async</option>
+                        <option value="defer" ${stratDefer} title="Load in parallel, execute after HTML parsing">Defer</option>
+                        <option value="delay" ${stratDelay} title="Delay loading until user interaction (click/scroll)">Delay</option>
+                        <option value="preload" ${stratPreload} title="Preload with high priority for critical assets">Preload</option>
+                        <option value="disable" ${stratDisable} title="Completely disable this asset on the target">Disable</option>
                     </select>
+                    <span class="strategy-description" style="display:block; font-size:11px; color:#666; margin-top:4px;"></span>
                     <label class="crossorigin-opt" style="display:${crossStyle}; margin-top:4px; font-size:11px;">
                         <input type="checkbox" name="optimize_speed_settings[script_manager_rules][${newIndex}][crossorigin]" value="1" ${crossChecked}>
                         Crossorigin
@@ -299,15 +300,29 @@ jQuery(document).ready(function ($) {
         }
     });
 
-    // 4. Toggle Strategy Options (Crossorigin)
+    // 4. Toggle Strategy Options (Crossorigin) and Show Description
+    var strategyDescriptions = {
+        'async': '⚡ Load in parallel, execute immediately when ready (may run before DOM ready)',
+        'defer': '📋 Load in parallel, execute after HTML parsing complete (safer than async)',
+        'delay': '⏳ Delay loading until user interaction - best for 3rd party scripts',
+        'preload': '🚀 Preload with high priority - use for critical above-the-fold assets',
+        'disable': '🚫 Completely disable this asset on the target page(s)'
+    };
+
     $(document).on('change', '.rule-strategy-select', function () {
         var val = $(this).val();
         var cell = $(this).closest('td');
+
+        // Show/hide crossorigin option
         if (val === 'preload') {
             cell.find('.crossorigin-opt').show();
         } else {
             cell.find('.crossorigin-opt').hide();
         }
+
+        // Update strategy description
+        var desc = strategyDescriptions[val] || '';
+        cell.find('.strategy-description').text(desc);
     });
 
     // 5. Sync Inputs to Hidden Field
@@ -336,7 +351,7 @@ jQuery(document).ready(function ($) {
         row += '<td><span class="asset-type ' + typeClass + '">' + typeLabel + '</span></td>';
         row += '<td class="src-cell" title="' + escapeHtml(src) + '">' + escapeHtml(srcDisplay) + '</td>';
         row += '<td>';
-        row += '<button type="button" class="button button-small add-rule-from-scan" data-handle="' + escapeHtml(handle) + '" data-type="' + type + '">Add Rule</button>';
+        row += '<button type="button" class="button button-small add-scanned-rule" data-handle="' + escapeHtml(handle) + '" data-type="' + type + '" data-strategy="disable">Add Rule</button>';
         row += '</td>';
         row += '</tr>';
 
@@ -433,12 +448,19 @@ jQuery(document).ready(function ($) {
         tbody.empty();
         urlDisplay.text('Scanning: ' + scanUrl);
 
-        // Perform Scan (Fetch the frontend page)
-        $.ajax({
-            url: scanUrl,
-            type: 'GET',
-            dataType: 'text', // Get as text first to handle potential trailing content
-            success: function (responseText) {
+        // Perform Scan (Fetch the frontend page as guest - without cookies)
+        fetch(scanUrl, {
+            method: 'GET',
+            credentials: 'omit', // Don't send cookies - scan as guest user
+            cache: 'no-store'
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                return response.text();
+            })
+            .then(function (responseText) {
                 btn.prop('disabled', false);
                 spinner.removeClass('is-active');
 
@@ -488,14 +510,13 @@ jQuery(document).ready(function ($) {
                 } else {
                     alert('Scan failed. Please check if the page exists.');
                 }
-            },
-            error: function (xhr, status, error) {
+            })
+            .catch(function (error) {
                 $('#scan-spinner').removeClass('is-active');
                 $('#start-scan-btn').prop('disabled', false);
-                console.error('Scan request error:', status, error);
-                alert('Scan request failed: ' + error);
-            }
-        });
+                console.error('Scan request error:', error);
+                alert('Scan request failed: ' + error.message);
+            });
     });
 
     $('#clear-scan-btn').on('click', function () {

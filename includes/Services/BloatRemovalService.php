@@ -4,6 +4,10 @@ namespace OptimizeSpeed\Services;
 
 use OptimizeSpeed\Core\ServiceInterface;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class BloatRemovalService implements ServiceInterface
 {
     private $options;

@@ -78,6 +78,44 @@ $options = get_option('optimize_speed_settings', []);
                     </div>
                 </div>
 
+                <!-- Security Section -->
+                <div class="settings-section" style="margin-top: 20px;">
+                    <h2>🔒 Security</h2>
+                    <p class="description">Protect your WordPress login from brute-force attacks.</p>
+
+                    <div class="bloat-removal-grid">
+                        <div class="option-card" style="grid-column: span 2;">
+                            <span class="option-content">
+                                <span class="option-title">Custom Login URL</span>
+                                <span class="option-desc">Hide wp-login.php and wp-admin with a custom URL. Leave empty
+                                    to disable.</span>
+                                <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                                    <code
+                                        style="background: #f0f0f1; padding: 8px 12px; border-radius: 4px;"><?php echo esc_url(home_url('/')); ?></code>
+                                    <input type="text" name="optimize_speed_settings[custom_login_slug]"
+                                        value="<?php echo esc_attr(isset($options['custom_login_slug']) ? $options['custom_login_slug'] : ''); ?>"
+                                        placeholder="my-secret-login" class="regular-text" pattern="[a-z0-9-]+"
+                                        style="max-width: 200px;">
+                                </div>
+                                <?php if (!empty($options['custom_login_slug'])): ?>
+                                    <div
+                                        style="margin-top: 10px; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+                                        ✅ <strong>Active:</strong> Your login URL is now
+                                        <a href="<?php echo esc_url(home_url($options['custom_login_slug'])); ?>"
+                                            target="_blank">
+                                            <?php echo esc_url(home_url($options['custom_login_slug'])); ?>
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                                <p style="margin-top: 8px; color: #d63638; font-size: 12px;">
+                                    ⚠️ <strong>Warning:</strong> Remember your new login URL! If you forget it, disable
+                                    the plugin via FTP.
+                                </p>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
                 <?php submit_button('Save Settings'); ?>
             </div>
 
@@ -216,11 +254,11 @@ $options = get_option('optimize_speed_settings', []);
                             <option value="url">Custom URL</option>
                             <option value="id">Specific Page ID</option>
                         </select>
-                        
+
                         <!-- Manual ID Input -->
                         <input type="number" id="scan-target-id" placeholder="Page ID (e.g., 123)"
                             style="display:none; width:100px;">
-                        
+
                         <!-- Manual URL Input -->
                         <input type="url" id="scan-target-url" placeholder="https://..."
                             style="display:none; width:300px;">
@@ -228,8 +266,9 @@ $options = get_option('optimize_speed_settings', []);
                         <!-- Post Type Select -->
                         <select id="scan-target-post-type" style="display:none;">
                             <option value="">Select Type</option>
-                            <?php foreach($pt_js as $pt): ?>
-                                <option value="<?php echo esc_attr($pt['slug']); ?>"><?php echo esc_html($pt['label']); ?></option>
+                            <?php foreach ($pt_js as $pt): ?>
+                                <option value="<?php echo esc_attr($pt['slug']); ?>"><?php echo esc_html($pt['label']); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
 
@@ -432,12 +471,19 @@ $options = get_option('optimize_speed_settings', []);
                                         <select
                                             name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][strategy]"
                                             class="rule-strategy-select" style="width:100%">
-                                            <option value="async" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'async'); ?>>Async</option>
-                                            <option value="defer" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'defer'); ?>>Defer</option>
-                                            <option value="delay" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'delay'); ?>>Delay</option>
-                                            <option value="preload" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'preload'); ?>>Preload</option>
-                                            <option value="disable" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'disable'); ?>>Disable</option>
+                                            <option value="async" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'async'); ?>
+                                                title="Load in parallel, execute immediately when ready">Async</option>
+                                            <option value="defer" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'defer'); ?>
+                                                title="Load in parallel, execute after HTML parsing">Defer</option>
+                                            <option value="delay" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'delay'); ?>
+                                                title="Delay loading until user interaction (click/scroll)">Delay</option>
+                                            <option value="preload" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'preload'); ?>
+                                                title="Preload with high priority for critical assets">Preload</option>
+                                            <option value="disable" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'disable'); ?>
+                                                title="Completely disable this asset on the target">Disable</option>
                                         </select>
+                                        <span class="strategy-description"
+                                            style="display:block; font-size:11px; color:#666; margin-top:4px;"></span>
                                         <label class="crossorigin-opt"
                                             style="display:<?php echo (isset($rule['strategy']) && $rule['strategy'] === 'preload') ? 'block' : 'none'; ?>; margin-top:4px; font-size:11px;">
                                             <input type="checkbox"

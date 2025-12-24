@@ -88,6 +88,7 @@ class AdminService implements ServiceInterface
 
                 // Security
                 ['disable_password_strength_meter', 'Disable Password Strength Meter', 'Frontend forms'],
+                ['custom_login_slug', 'Custom Login URL', 'e.g. my-secret-login (leave empty to disable)'],
                 // Analytics
                 ['gtm', 'Google Tag Manager', 'Container ID (GTM-XXXX)'],
                 ['gtag', 'Google Analytics 4', 'Measurement ID (G-XXXX)'],
@@ -192,7 +193,7 @@ class AdminService implements ServiceInterface
             'optimize-speed-admin',
             plugins_url('assets/js/admin.js', dirname(dirname(__FILE__))),
             ['jquery'],
-            '1.0.7', // Increment version to bust cache
+            '1.1.0', // Increment version to bust cache
             true
         );
 

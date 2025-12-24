@@ -3,6 +3,10 @@ namespace OptimizeSpeed\Services;
 
 use OptimizeSpeed\Core\ServiceInterface;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class LazyLoadService implements ServiceInterface
 {
     private $options;

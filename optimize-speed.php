@@ -59,6 +59,7 @@ function optimize_speed_init()
     $plugin->register_service(new \OptimizeSpeed\Services\ScriptManagerService());
     $plugin->register_service(new \OptimizeSpeed\Services\ResourceHintService());
     $plugin->register_service(new \OptimizeSpeed\Services\LocalFontService());
+    $plugin->register_service(new \OptimizeSpeed\Services\HideLoginService());
 
     // Run Plugin
     $plugin->run();
