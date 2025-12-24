@@ -23,6 +23,12 @@ class SecurityHardeningService implements ServiceInterface
 
     public function register()
     {
+        // Disable File Editing must be done early
+        $options = get_option(self::OPTION_NAME, []);
+        if (!empty($options['disable_file_editing'])) {
+            $this->disable_file_editing();
+        }
+
         add_action('init', [$this, 'init']);
     }
 
@@ -47,10 +53,7 @@ class SecurityHardeningService implements ServiceInterface
             add_action('wp_login', [$this, 'clear_login_attempts'], 10, 2);
         }
 
-        // Disable File Editing
-        if (!empty($this->options['disable_file_editing'])) {
-            $this->disable_file_editing();
-        }
+        // Note: Disable File Editing is handled in register() for proper timing
 
         // Block PHP in Uploads
         if (!empty($this->options['block_php_uploads'])) {
