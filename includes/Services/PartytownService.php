@@ -63,15 +63,11 @@ class PartytownService implements ServiceInterface
 
     public function enqueue_partytown_core()
     {
-        // Auto-enable if any integration has an ID set
-        if (!$this->has_any_integration())
+        // Only load Partytown if enabled
+        if (!$this->is_partytown_enabled())
             return;
 
         $partytown_url = OPTIMIZE_SPEED_URL . 'assets/partytown/';
-
-        // If local file doesn't exist, fallback to CDN or handle error?
-        // For now, we assume it exists if enabled (checked in admin_init)
-        // But to be safe, we can check or just use the URL.
 
         wp_enqueue_script(
             'partytown',
@@ -84,28 +80,44 @@ class PartytownService implements ServiceInterface
 
     public function print_partytown_config()
     {
-        // Auto-enable if any integration has an ID set
-        if (!$this->has_any_integration())
+        // Check if Partytown is enabled
+        if (!$this->is_partytown_enabled())
             return;
 
         $partytown_url = OPTIMIZE_SPEED_URL . 'assets/partytown/';
         $forward = $this->get_forward_events();
 
+        // Fixed config with global document fix for GTM compatibility
         echo '<script>
             window.partytown = {
                 lib: "' . esc_url($partytown_url) . '",
                 forward: ' . wp_json_encode($forward) . ',
-                debug: false
+                debug: false,
+                mainWindowAccessors: ["dataLayer"],
+                globalFns: ["dataLayer", "gtag", "fbq", "ttq", "clarity"]
             };
+            // Fix for GTM in web worker
+            window.global = window.document;
         </script>';
     }
 
     public function print_partytown_atom()
     {
-        // Auto-enable if any integration has an ID set
-        if (!$this->has_any_integration())
+        // Only output if Partytown enabled
+        if (!$this->is_partytown_enabled())
             return;
         echo '<script type="text/partytown">/* Partytown ready */</script>';
+    }
+
+    /**
+     * Check if Partytown mode is enabled
+     */
+    private function is_partytown_enabled()
+    {
+        if (empty($this->options)) {
+            $this->options = get_option(AdminService::OPTION_NAME, []);
+        }
+        return !empty($this->options['enable_partytown']) && $this->has_any_integration();
     }
 
     /**
@@ -153,9 +165,26 @@ class PartytownService implements ServiceInterface
 
     public function print_all_partytown_scripts()
     {
+        if (!$this->has_any_integration()) {
+            return;
+        }
+
+        // Use Partytown or fallback based on setting
+        if ($this->is_partytown_enabled()) {
+            $this->print_partytown_scripts();
+        } else {
+            $this->print_fallback_scripts();
+        }
+    }
+
+    /**
+     * Print scripts with Partytown (web worker)
+     */
+    private function print_partytown_scripts()
+    {
         $config = $this->get_integrations_config();
-        $scripts = [];
         $inline_inits = [];
+        $scripts = [];
 
         foreach ($config as $integration) {
             $id = '';
@@ -167,31 +196,29 @@ class PartytownService implements ServiceInterface
             }
 
             if ($id) {
-                // If extra options needed (like matomo_url), pass options
                 $script_data = $integration['partytown']($id, $this->options);
+
+                // IMPORTANT: Inline init MUST come before external script for proper dataLayer init
+                if (!empty($script_data['inline'])) {
+                    $inline_inits[] = $script_data['inline'];
+                }
 
                 if (!empty($script_data['external'])) {
                     $scripts[] = '<script type="text/partytown" src="' . esc_url($script_data['external']) . '"></script>';
                 }
-
-                if (!empty($script_data['inline'])) {
-                    $inline_inits[] = $script_data['inline'];
-                }
             }
         }
 
-        if (empty($scripts) && empty($inline_inits)) {
-            return;
-        }
-
-        if (!empty($scripts)) {
-            echo implode(PHP_EOL, $scripts) . PHP_EOL;
-        }
-
+        // Output inline init scripts FIRST
         if (!empty($inline_inits)) {
             echo '<script type="text/partytown">' . PHP_EOL;
             echo implode(PHP_EOL, $inline_inits) . PHP_EOL;
-            echo '</script>';
+            echo '</script>' . PHP_EOL;
+        }
+
+        // Then output external scripts
+        if (!empty($scripts)) {
+            echo implode(PHP_EOL, $scripts) . PHP_EOL;
         }
     }
 
@@ -248,7 +275,7 @@ class PartytownService implements ServiceInterface
                 'partytown' => function ($id) {
                     return [
                         'external' => "https://www.googletagmanager.com/gtag/js?id={$id}",
-                        'inline' => "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '{$id}');"
+                        'inline' => "window.dataLayer = window.dataLayer || []; window.gtag = function gtag(){dataLayer.push(arguments);}; gtag('js', new Date()); gtag('config', '{$id}');"
                     ];
                 },
                 'fallback' => function ($id) {

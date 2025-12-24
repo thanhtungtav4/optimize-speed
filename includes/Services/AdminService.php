@@ -96,7 +96,8 @@ class AdminService implements ServiceInterface
                 ['block_php_uploads', 'Block PHP in Uploads', 'Prevent PHP execution in uploads folder'],
                 ['disable_xmlrpc', 'Disable XML-RPC', 'Block XML-RPC & pingbacks'],
 
-                // Analytics
+                // Analytics (Partytown Integration)
+                ['enable_partytown', 'Enable Partytown', 'Run scripts in Web Worker (faster but may affect tracking)'],
                 ['gtm', 'Google Tag Manager', 'Container ID (GTM-XXXX)'],
                 ['gtag', 'Google Analytics 4', 'Measurement ID (G-XXXX)'],
                 ['fbpixel', 'Facebook Pixel', 'Pixel ID'],
