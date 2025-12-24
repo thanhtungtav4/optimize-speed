@@ -434,12 +434,12 @@ jQuery(document).ready(function ($) {
             }
         }
 
-        // Add scan param and nonce
+        // Add scan param and secret key
         var scanUrl = targetUrl;
         if (scanUrl.indexOf('?') > -1) {
-            scanUrl += '&os_scan_assets=1&os_nonce=' + optimizeSpeedAdmin.nonce;
+            scanUrl += '&os_scan_assets=1&os_key=' + optimizeSpeedAdmin.scanKey;
         } else {
-            scanUrl += '?os_scan_assets=1&os_nonce=' + optimizeSpeedAdmin.nonce;
+            scanUrl += '?os_scan_assets=1&os_key=' + optimizeSpeedAdmin.scanKey;
         }
 
         if (scanUrl.indexOf('http') !== 0) {

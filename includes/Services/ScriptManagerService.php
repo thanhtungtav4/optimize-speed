@@ -75,19 +75,23 @@ class ScriptManagerService implements ServiceInterface
     // --- Scanner Logic ---
     public function handle_scan_request()
     {
-        // Check nonce passed as query param instead of user capability
-        // (because fetch is done without cookies to simulate guest user)
-        $nonce = isset($_GET['os_nonce']) ? sanitize_text_field($_GET['os_nonce']) : '';
+        // Use secret key hash for authentication since nonce requires cookie session
+        // and we fetch without cookies to simulate guest user
+        $key = isset($_GET['os_key']) ? sanitize_text_field($_GET['os_key']) : '';
+        $expected_key = substr(md5(NONCE_SALT . 'os_scan'), 0, 16);
 
-        if (!$nonce || !wp_verify_nonce($nonce, 'optimize_speed_admin_nonce')) {
-            // Fallback: allow if user is admin (for testing with cookies)
+        if ($key !== $expected_key) {
+            // Fallback: allow if user is admin (with cookies)
             if (!current_user_can('manage_options')) {
                 return;
             }
         }
 
-        // Use shutdown hook to output JSON after all scripts are registered
-        add_action('shutdown', [$this, 'return_scan_results'], 0);
+        // Start output buffering immediately to capture all HTML
+        ob_start();
+
+        // Hook to wp_footer at very high priority to output JSON
+        add_action('wp_footer', [$this, 'return_scan_results'], 999999);
     }
 
     public function return_scan_results()
@@ -125,12 +129,12 @@ class ScriptManagerService implements ServiceInterface
             }
         }
 
-        // Clean ALL output buffers
+        // Discard ALL buffered output (HTML)
         while (ob_get_level()) {
             ob_end_clean();
         }
 
-        // Send clean JSON and exit immediately
+        // Output clean JSON only
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => true, 'data' => $assets]);
         exit;
