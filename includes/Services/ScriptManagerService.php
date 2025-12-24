@@ -75,15 +75,19 @@ class ScriptManagerService implements ServiceInterface
     // --- Scanner Logic ---
     public function handle_scan_request()
     {
-        if (!current_user_can('manage_options')) {
-            return;
+        // Check nonce passed as query param instead of user capability
+        // (because fetch is done without cookies to simulate guest user)
+        $nonce = isset($_GET['os_nonce']) ? sanitize_text_field($_GET['os_nonce']) : '';
+
+        if (!$nonce || !wp_verify_nonce($nonce, 'optimize_speed_admin_nonce')) {
+            // Fallback: allow if user is admin (for testing with cookies)
+            if (!current_user_can('manage_options')) {
+                return;
+            }
         }
 
-        // Start output buffering to capture and discard all HTML
-        ob_start();
-
-        // We hook to 'wp_print_footer_scripts' at very high priority to ensure we catch everything
-        add_action('wp_print_footer_scripts', [$this, 'return_scan_results'], 999999);
+        // Use shutdown hook to output JSON after all scripts are registered
+        add_action('shutdown', [$this, 'return_scan_results'], 0);
     }
 
     public function return_scan_results()
@@ -121,12 +125,15 @@ class ScriptManagerService implements ServiceInterface
             }
         }
 
-        // Clean buffer (discard HTML)
+        // Clean ALL output buffers
         while (ob_get_level()) {
             ob_end_clean();
         }
 
-        wp_send_json_success($assets);
+        // Send clean JSON and exit immediately
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'data' => $assets]);
+        exit;
     }
 
     public function inject_preload_hints()

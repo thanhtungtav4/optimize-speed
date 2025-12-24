@@ -347,11 +347,20 @@ jQuery(document).ready(function ($) {
         }
 
         var row = '<tr class="scan-row ' + typeClass + '">';
+        row += '<td><input type="checkbox" class="scan-item-check" data-handle="' + escapeHtml(handle) + '" data-type="' + type + '"></td>';
         row += '<td><strong>' + escapeHtml(handle) + '</strong></td>';
         row += '<td><span class="asset-type ' + typeClass + '">' + typeLabel + '</span></td>';
         row += '<td class="src-cell" title="' + escapeHtml(src) + '">' + escapeHtml(srcDisplay) + '</td>';
         row += '<td>';
-        row += '<button type="button" class="button button-small add-scanned-rule" data-handle="' + escapeHtml(handle) + '" data-type="' + type + '" data-strategy="disable">Add Rule</button>';
+        row += '<select class="scan-strategy-select" style="width:100px">';
+        row += '<option value="disable">Disable</option>';
+        row += '<option value="defer">Defer</option>';
+        row += '<option value="async">Async</option>';
+        row += '<option value="delay">Delay</option>';
+        row += '</select>';
+        row += '</td>';
+        row += '<td>';
+        row += '<button type="button" class="button button-small add-scanned-rule" data-handle="' + escapeHtml(handle) + '" data-type="' + type + '">Add</button>';
         row += '</td>';
         row += '</tr>';
 
@@ -425,12 +434,12 @@ jQuery(document).ready(function ($) {
             }
         }
 
-        // Add scan param
+        // Add scan param and nonce
         var scanUrl = targetUrl;
         if (scanUrl.indexOf('?') > -1) {
-            scanUrl += '&os_scan_assets=1';
+            scanUrl += '&os_scan_assets=1&os_nonce=' + optimizeSpeedAdmin.nonce;
         } else {
-            scanUrl += '?os_scan_assets=1';
+            scanUrl += '?os_scan_assets=1&os_nonce=' + optimizeSpeedAdmin.nonce;
         }
 
         if (scanUrl.indexOf('http') !== 0) {
@@ -526,9 +535,11 @@ jQuery(document).ready(function ($) {
 
     // Add Scanned Rule to Table
     $(document).on('click', '.add-scanned-rule', function () {
-        var handle = $(this).data('handle');
-        var type = $(this).data('type');
-        var strategy = $(this).data('strategy');
+        var btn = $(this);
+        var row = btn.closest('tr');
+        var handle = btn.data('handle');
+        var type = btn.data('type');
+        var strategy = row.find('.scan-strategy-select').val() || 'disable';
         var targetType = $('#scan-target-type').val();
         var targetId = $('#scan-target-id').val();
 
