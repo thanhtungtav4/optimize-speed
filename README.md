@@ -1,6 +1,6 @@
 # Optimize Speed WordPress Plugin
 
-All-in-one speed optimization plugin with Partytown integration and Native Image Optimization.
+All-in-one WordPress optimization plugin: Performance, Security & Analytics.
 
 ## Features
 
@@ -22,7 +22,22 @@ All-in-one speed optimization plugin with Partytown integration and Native Image
 - LCP optimization (`fetchpriority="high"`)
 - Bulk image regeneration
 
-### 🧹 Bloat Removal (39+ options!)
+### 🔒 Security Hardening
+- **Custom Login URL** - Hide wp-login.php
+- **Limit Login Attempts** - Block IP after 5 failed attempts (15min lockout)
+- **Security Headers** - X-Frame-Options, X-XSS-Protection, CSP
+- **Enable HSTS** - HTTP Strict Transport Security
+- **Disable File Editing** - Block theme/plugin editor in admin
+- **Block PHP in Uploads** - Prevent PHP execution in uploads folder
+- **Disable XML-RPC** - Block XML-RPC & pingbacks
+
+### 🚀 Performance Optimization
+- Lazy Load Iframes/Videos (YouTube/Vimeo facades)
+- Local Google Fonts (download & serve locally)
+- Resource Preloading
+- Script Manager with Defer/Delay options
+
+### 🧹 Bloat Removal (40+ options!)
 **WordPress Core:**
 - Disable Emojis, Embeds, XML-RPC
 - Remove jQuery / jQuery Migrate
@@ -49,8 +64,6 @@ All-in-one speed optimization plugin with Partytown integration and Native Image
 **Page Builders:**
 - Smart Elementor asset loading
 
-**And 20+ more optimizations!**
-
 ### 🗄️ Database Optimization
 - Clean expired transients
 - Remove post revisions
@@ -65,66 +78,39 @@ All-in-one speed optimization plugin with Partytown integration and Native Image
 3. Go to **Settings → Optimize Speed**
 4. Configure your optimization settings
 
-### Partytown Assets
-
-**✅ Pre-bundled** - No download required!
-
-The plugin includes Partytown library files in `assets/partytown/`:
-- `partytown.js` - Core library
-- `partytown-sw.js` - Service Worker
-- `partytown-atomics.js` - SharedArrayBuffer support
-- `partytown-media.js` - Media queries handler
-
-**Works on all hosting environments**, even those with restricted write permissions.
-
-## Usage
-
-### Enable Partytown
-
-1. Go to **Settings → Optimize Speed → Partytown**
-2. Enter your tracking IDs:
-   ```
-   Google Tag Manager: GTM-XXXXXXX
-   Google Analytics: G-XXXXXXXXXX
-   Facebook Pixel: 1234567890
-   TikTok Pixel: XXXXXXXXXXXXX
-   Microsoft Clarity: xxxxxxxxxx
-   ```
-3. Save settings
-4. ✅ All scripts now run in Web Workers!
-
-### Performance Impact
-
-**Before Partytown:**
-- Main Thread: 8.5s
-- Blocking Time: 2100ms
-- Lighthouse: 45
-
-**After Partytown:**
-- Main Thread: 2.1s ⚡ (75% faster)
-- Blocking Time: 180ms ⚡
-- Lighthouse: 92 ⚡
-
 ## Requirements
 
 - WordPress 5.8+
 - PHP 7.4+
-- HTTPS (required for Service Workers)
+- HTTPS (required for Service Workers & HSTS)
 
 ## Documentation
 
 - **Website:** https://nttung.dev/toi-uu-toc-do-website/
 - **INP Guide:** https://nttung.dev/huong-dan-toi-uu-inp/
 
-
 ## Changelog
 
-### v1.0.1 (December 3, 2025)
+### v1.0.3 (December 24, 2024)
+- ✅ **Security Hardening Service** - Comprehensive security features
+- ✅ **Limit Login Attempts** - Block brute-force attacks
+- ✅ **Security Headers** - X-Frame-Options, X-XSS-Protection, HSTS
+- ✅ **Custom Login URL** - Hide wp-login.php
+- ✅ **Block PHP in Uploads** - Prevent malicious uploads
+- ✅ **Disable XML-RPC** - Block pingbacks
+- ✅ **BaseService Class** - Cached options, helper methods
+- ✅ Code refactoring & optimization
+
+### v1.0.2 (December 2024)
+- ✅ Script Manager with Defer/Delay
+- ✅ Lazy Load Iframes/Videos
+- ✅ Local Google Fonts
+- ✅ Resource Hints
+
+### v1.0.1 (December 3, 2024)
 - ✅ **Bundled Partytown assets** (no CDN download)
 - ✅ Added GTM support
 - ✅ Fixed tab navigation UI
-- ✅ Support both old/new field names
-- ✅ Enhanced fallback scripts
 - ✅ Works on restricted hosting
 
 ### v1.0.0
@@ -140,5 +126,4 @@ MIT License - Feel free to use in your projects!
 
 ---
 
-**Made with ❤️ by Antigravity**
-
+**Made with ❤️ by Dev Team**
