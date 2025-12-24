@@ -89,6 +89,13 @@ class AdminService implements ServiceInterface
                 // Security
                 ['disable_password_strength_meter', 'Disable Password Strength Meter', 'Frontend forms'],
                 ['custom_login_slug', 'Custom Login URL', 'e.g. my-secret-login (leave empty to disable)'],
+                ['limit_login_attempts', 'Limit Login Attempts', 'Block IP after 5 failed attempts'],
+                ['security_headers', 'Security Headers', 'X-Frame-Options, X-XSS-Protection, etc.'],
+                ['enable_hsts', 'Enable HSTS', 'HTTP Strict Transport Security (SSL required)'],
+                ['disable_file_editing', 'Disable File Editing', 'Block theme/plugin editor in admin'],
+                ['block_php_uploads', 'Block PHP in Uploads', 'Prevent PHP execution in uploads folder'],
+                ['disable_xmlrpc', 'Disable XML-RPC', 'Block XML-RPC & pingbacks'],
+
                 // Analytics
                 ['gtm', 'Google Tag Manager', 'Container ID (GTM-XXXX)'],
                 ['gtag', 'Google Analytics 4', 'Measurement ID (G-XXXX)'],

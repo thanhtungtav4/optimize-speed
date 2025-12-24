@@ -60,6 +60,7 @@ function optimize_speed_init()
     $plugin->register_service(new \OptimizeSpeed\Services\ResourceHintService());
     $plugin->register_service(new \OptimizeSpeed\Services\LocalFontService());
     $plugin->register_service(new \OptimizeSpeed\Services\HideLoginService());
+    $plugin->register_service(new \OptimizeSpeed\Services\SecurityHardeningService());
 
     // Run Plugin
     $plugin->run();
