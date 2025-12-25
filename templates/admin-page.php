@@ -10,7 +10,7 @@ $options = get_option('optimize_speed_settings', []);
     <p class="description">Comprehensive performance optimization for your WordPress site.</p>
 
     <!-- Tab Navigation -->
-    <nav class="nav-tab-wrapper">
+    <nav class="nav-tab-wrapper os-main-nav">
         <a href="#bloat-removal" class="nav-tab nav-tab-active">🧹 Bloat Removal</a>
         <a href="#performance" class="nav-tab">🚀 Performance</a>
         <a href="#script-manager" class="nav-tab">📜 Script Manager</a>
@@ -116,7 +116,7 @@ $options = get_option('optimize_speed_settings', []);
                     </div>
                 </div>
 
-                <?php submit_button('Save Settings'); ?>
+                <?php submit_button('Save Settings', 'primary', 'submit_bloat'); ?>
             </div>
 
             <!-- Partytown Tab -->
@@ -245,15 +245,133 @@ $options = get_option('optimize_speed_settings', []);
                     <p class="description">Select a page to scan for loaded scripts and styles, then configure them
                         visually.</p>
 
+                    <?php
+                    // Get pages for dropdown (cached for 1 hour)
+                    $pages = get_transient('os_scanner_pages');
+                    if (false === $pages) {
+                        $pages = get_pages(['number' => 50, 'sort_column' => 'menu_order,post_title']);
+                        set_transient('os_scanner_pages', $pages, HOUR_IN_SECONDS);
+                    }
+
+                    // Get recent posts (cached for 1 hour)
+                    $recent_posts = get_transient('os_scanner_posts');
+                    if (false === $recent_posts) {
+                        $recent_posts = get_posts([
+                            'post_type' => 'post',
+                            'numberposts' => 20,
+                            'post_status' => 'publish'
+                        ]);
+                        set_transient('os_scanner_posts', $recent_posts, HOUR_IN_SECONDS);
+                    }
+
+                    // Get WooCommerce products if exists (cached for 1 hour)
+                    $products = get_transient('os_scanner_products');
+                    if (false === $products) {
+                        $products = [];
+                        if (post_type_exists('product')) {
+                            $products = get_posts([
+                                'post_type' => 'product',
+                                'numberposts' => 20,
+                                'post_status' => 'publish'
+                            ]);
+                        }
+                        set_transient('os_scanner_products', $products, HOUR_IN_SECONDS);
+                    }
+
+                    // --- Pre-fetch Post Types for Dropdown & JS Data ---
+                    $post_types = get_post_types(['public' => true], 'objects');
+                    $exclude_types = ['attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block'];
+
+                    $pt_js = [];
+                    $sample_urls = [];
+
+                    foreach ($post_types as $pt) {
+                        if (!in_array($pt->name, $exclude_types)) {
+                            $pt_js[] = ['slug' => $pt->name, 'label' => $pt->label];
+
+                            // Get Latest Post of this Type
+                            $latest_posts = get_posts([
+                                'post_type' => $pt->name,
+                                'numberposts' => 1,
+                                'post_status' => 'publish',
+                            ]);
+
+                            $single_url = '';
+                            if (!empty($latest_posts)) {
+                                $single_url = get_permalink($latest_posts[0]->ID);
+                            }
+
+                            // Get Archive URL (if registered)
+                            $archive_url = '';
+                            if ($pt->has_archive) {
+                                $archive_url = get_post_type_archive_link($pt->name);
+                            }
+
+                            $sample_urls[$pt->name] = [
+                                'single' => $single_url,
+                                'archive' => $archive_url
+                            ];
+                        }
+                    }
+
+                    // Fetch page templates
+                    $templates = get_page_templates(null, 'page');
+                    if (empty($templates)) {
+                        $templates = array_flip(get_page_templates());
+                    }
+                    $tpl_js = [];
+                    foreach ($templates as $tname => $tfile) {
+                        $tpl_js[] = ['file' => $tfile, 'name' => $tname];
+                    }
+                    ?>
+
                     <div
                         style="display:flex; gap:10px; align-items:center; margin-bottom:15px; background:#fff; padding:15px; border:1px solid #ccd0d4; border-radius:4px; flex-wrap:wrap;">
                         <select id="scan-target-type">
-                            <option value="homepage">Homepage</option>
-                            <option value="post_type">Latest Post of Type...</option>
-                            <option value="archive">Archive of Type...</option>
-                            <option value="url">Custom URL</option>
-                            <option value="id">Specific Page ID</option>
+                            <option value="homepage">🏠 Homepage</option>
+                            <option value="page">📄 Select Page</option>
+                            <option value="post">📝 Select Post</option>
+                            <?php if (!empty($products)): ?>
+                                <option value="product">🛒 Select Product</option>
+                            <?php endif; ?>
+                            <option value="post_type">📁 Latest of Post Type...</option>
+                            <option value="specific_post_type">🗂️ Post of Type...</option>
+                            <option value="archive">📚 Archive of Type...</option>
+                            <option value="url">🔗 Custom URL</option>
+                            <option value="id">🔢 Specific Page ID</option>
                         </select>
+
+                        <!-- Page Select Dropdown -->
+                        <select id="scan-target-page" style="display:none; min-width:200px;">
+                            <option value="">-- Select Page --</option>
+                            <?php foreach ($pages as $page): ?>
+                                <option value="<?php echo esc_attr(get_permalink($page->ID)); ?>" data-id="<?php echo esc_attr($page->ID); ?>">
+                                    <?php echo esc_html($page->post_title); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <!-- Post Select Dropdown -->
+                        <select id="scan-target-post" style="display:none; min-width:200px;">
+                            <option value="">-- Select Post --</option>
+                            <?php foreach ($recent_posts as $post): ?>
+                                <option value="<?php echo esc_attr(get_permalink($post->ID)); ?>" data-id="<?php echo esc_attr($post->ID); ?>">
+                                    <?php echo esc_html($post->post_title); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <!-- Product Select Dropdown -->
+                        <?php if (!empty($products)): ?>
+                            <select id="scan-target-product" style="display:none; min-width:200px;">
+                                <option value="">-- Select Product --</option>
+                                <?php foreach ($products as $prod): ?>
+                                    <option value="<?php echo esc_attr(get_permalink($prod->ID)); ?>" data-id="<?php echo esc_attr($prod->ID); ?>">
+                                        <?php echo esc_html($prod->post_title); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php endif; ?>
 
                         <!-- Manual ID Input -->
                         <input type="number" id="scan-target-id" placeholder="Page ID (e.g., 123)"
@@ -272,6 +390,11 @@ $options = get_option('optimize_speed_settings', []);
                             <?php endforeach; ?>
                         </select>
 
+                        <!-- Specific Post Select -->
+                        <select id="scan-target-specific-post" style="display:none; min-width:200px;">
+                            <option value="">-- Select Item --</option>
+                        </select>
+
                         <button type="button" class="button button-primary" id="start-scan-btn">🔍 Scan Assets</button>
                         <span class="spinner" id="scan-spinner"></span>
                     </div>
@@ -279,13 +402,28 @@ $options = get_option('optimize_speed_settings', []);
                     <div id="scan-results" style="display:none;">
                         <h3>Scanned Assets <span id="scan-url-display"
                                 style="font-weight:normal; font-size:12px; color:#666;"></span></h3>
-                        <table class="wp-list-table widefat fixed striped">
+                        
+                        <!-- Filter & Grouping Controls -->
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; align-items:center;">
+                            <input type="text" id="scan-filter" placeholder="Filter assets (e.g. jquery, slider)..." style="width:300px;">
+                            
+                            <div class="scan-view-controls">
+                                <button type="button" class="button button-secondary active" data-view="list" id="view-list-btn">📝 List View</button>
+                                <button type="button" class="button button-secondary" data-view="group" id="view-group-btn">📂 Group by Source</button>
+                            </div>
+                        </div>
+
+                        <table class="wp-list-table widefat fixed striped" id="scan-table">
                             <thead>
                                 <tr>
-                                    <th>Asset Handle</th>
-                                    <th>Type</th>
-                                    <th>Source</th>
-                                    <th>Action</th>
+                                    <th width="3%"><input type="checkbox" id="scan-select-all"></th>
+                                    <th width="20%">Asset Handle</th>
+                                    <th width="8%">Size</th>
+                                    <th width="5%">Type</th>
+                                    <th width="10%">Source</th>
+                                    <th width="15%">Scope</th>
+                                    <th width="12%">Strategy</th>
+                                    <th width="10%">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="scan-results-body">
@@ -293,6 +431,8 @@ $options = get_option('optimize_speed_settings', []);
                             </tbody>
                         </table>
                         <p style="margin-top:10px; text-align:right;">
+                            <button type="button" class="button" id="add-selected-btn" style="margin-right:10px;">➕ Add
+                                Selected Rules</button>
                             <button type="button" class="button" id="clear-scan-btn">Clear Results</button>
                         </p>
                     </div>
@@ -302,207 +442,149 @@ $options = get_option('optimize_speed_settings', []);
                     <h2>Script Rules Engine</h2>
                     <p class="description">Define specific rules for plugins or pages. Overrides global settings.</p>
 
-                    <table class="wp-list-table widefat fixed striped" id="rules-table">
-                        <thead>
-                            <tr>
-                                <th width="20%">Target</th>
-                                <th width="25%">Asset Handle/Keyword</th>
-                                <th width="15%">Type</th>
-                                <th width="25%">Strategy</th>
-                                <th width="15%">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rules-tbody">
-                            <?php
-                            // Fetch public post types
-                            $post_types = get_post_types(['public' => true], 'objects');
-                            $exclude_types = ['attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block'];
+                    <!-- New Tabbed Interface for Rules -->
+                    <div class="os-rules-tabs nav-tab-wrapper" style="margin-bottom: 15px;">
+                        <a href="#rules-global" class="nav-tab nav-tab-active">Global Rules</a>
+                        <a href="#rules-homepage" class="nav-tab">Homepage Rules</a>
+                        <a href="#rules-specific" class="nav-tab">Page/Post Specific</a>
+                    </div>
 
-                            $pt_js = [];
-                            $sample_urls = [];
-
-                            foreach ($post_types as $pt) {
-                                if (!in_array($pt->name, $exclude_types)) {
-                                    $pt_js[] = ['slug' => $pt->name, 'label' => $pt->label];
-
-                                    // Get Latest Post of this Type
-                                    $latest_posts = get_posts([
-                                        'post_type' => $pt->name,
-                                        'numberposts' => 1,
-                                        'post_status' => 'publish',
-                                    ]);
-
-                                    $single_url = '';
-                                    if (!empty($latest_posts)) {
-                                        $single_url = get_permalink($latest_posts[0]->ID);
-                                    }
-
-                                    // Get Archive URL (if registered)
-                                    $archive_url = '';
-                                    if ($pt->has_archive) {
-                                        $archive_url = get_post_type_archive_link($pt->name);
-                                    }
-
-                                    $sample_urls[$pt->name] = [
-                                        'single' => $single_url,
-                                        'archive' => $archive_url
-                                    ];
-                                }
-                            }
-
-                            // Fetch page templates
-                            $templates = get_page_templates(null, 'page');
-                            if (empty($templates)) {
-                                $templates = array_flip(get_page_templates());
-                            }
-                            $tpl_js = [];
-                            foreach ($templates as $tname => $tfile) {
-                                $tpl_js[] = ['file' => $tfile, 'name' => $tname];
-                            }
+                    <?php
+                    // Helper function to render rule row (since we now have multiple loops)
+                    if (!function_exists('os_render_rule_row')) {
+                        function os_render_rule_row($i, $rule, $post_types, $templates, $exclude_types)
+                        {
+                            $rule_target = isset($rule['target']) ? $rule['target'] : 'global';
+                            $custom_id = isset($rule['custom_id']) ? $rule['custom_id'] : '';
+                            $show_custom = ($rule_target === 'custom');
+                            $show_post_type = ($rule_target === 'post_type');
+                            $show_template = ($rule_target === 'page_template');
+                            $handle = isset($rule['handle']) ? $rule['handle'] : '';
                             ?>
-                            <script>
-                                window.osData = {
-                                    post_types: <?php echo json_encode($pt_js); ?>,
-                                    templates: <?php echo json_encode($tpl_js); ?>,
-                                    sample_urls: <?php echo json_encode($sample_urls); ?>
-                                };
-                            </script>
-                            <?php
+                            <tr class="rule-row info-row">
+                                <!-- Hidden Index / Metadata -->
+                                <input type="hidden" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][target]" class="rule-target-val" value="<?php echo esc_attr($rule_target); ?>">
+                                
+                                <td width="30%">
+                                    <strong><?php echo esc_html($handle); ?></strong>
+                                    <?php if(!empty($rule['is_regex'])): ?>
+                                        <span class="os-badge-small">Regex</span>
+                                    <?php endif; ?>
+                                    
+                                    <!-- Inputs for saving (hidden mostly) -->
+                                    <input type="hidden" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][handle]" value="<?php echo esc_attr($handle); ?>">
+                                    <input type="hidden" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][is_regex]" value="<?php echo isset($rule['is_regex']) ? $rule['is_regex'] : 0; ?>">
 
-                            $rules = isset($options['script_manager_rules']) ? $options['script_manager_rules'] : [];
-                            if (!is_array($rules))
-                                $rules = [];
-
-                            foreach ($rules as $i => $rule):
-                                $rule_target = isset($rule['target']) ? $rule['target'] : 'global';
-                                $custom_id = isset($rule['custom_id']) ? $rule['custom_id'] : '';
-
-                                // Logic to determine which input to show
-                                $show_custom = ($rule_target === 'custom');
-                                $show_post_type = ($rule_target === 'post_type');
-                                $show_template = ($rule_target === 'page_template');
-                                ?>
-                                <tr class="rule-row">
-                                    <td>
-                                        <select
-                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][target]"
-                                            class="rule-target-select" style="width:100%">
-                                            <option value="global" <?php selected($rule_target, 'global'); ?>>Global
-                                            </option>
-                                            <option value="homepage" <?php selected($rule_target, 'homepage'); ?>>Homepage
-                                            </option>
-                                            <option value="custom" <?php selected($rule_target, 'custom'); ?>>ID</option>
-                                            <option value="post_type" <?php selected($rule_target, 'post_type'); ?>>Post
-                                                Type</option>
-                                            <option value="page_template" <?php selected($rule_target, 'page_template'); ?>>
-                                                Template</option>
-                                        </select>
-
-                                        <!-- ID Input -->
-                                        <input type="number"
-                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_num]"
-                                            value="<?php echo ($show_custom ? esc_attr($custom_id) : ''); ?>"
-                                            placeholder="Page ID"
-                                            style="width:100%; margin-top:5px; display:<?php echo ($show_custom ? 'block' : 'none'); ?>"
-                                            class="target-id-input target-input-custom">
-
-                                        <!-- Post Type Select -->
-                                        <select
-                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_type]"
-                                            class="target-input-post_type"
-                                            style="width:100%; margin-top:5px; display:<?php echo ($show_post_type ? 'block' : 'none'); ?>">
-                                            <option value="">Select Post Type</option>
-                                            <?php foreach ($post_types as $pt):
-                                                if (in_array($pt->name, $exclude_types))
-                                                    continue;
-                                                ?>
-                                                <option value="<?php echo esc_attr($pt->name); ?>" <?php selected($custom_id, $pt->name); ?>><?php echo esc_html($pt->label); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-
-                                        <!-- Page Template Select -->
-                                        <select
-                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_tpl]"
-                                            class="target-input-page_template"
-                                            style="width:100%; margin-top:5px; display:<?php echo ($show_template ? 'block' : 'none'); ?>">
-                                            <option value="default">Default Template</option>
-                                            <?php foreach ($templates as $tpl_name => $tpl_file): ?>
-                                                <option value="<?php echo esc_attr($tpl_file); ?>" <?php selected($custom_id, $tpl_file); ?>><?php echo esc_html($tpl_name); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-
-                                        <!-- Hidden consolidated field -->
+                                    <!-- Target Info Display -->
+                                    <div class="target-display" style="margin-top:5px; font-size:12px; color:#666;">
+                                        <?php if($rule_target === 'global'): ?>
+                                            Global
+                                        <?php elseif($rule_target === 'homepage'): ?>
+                                            Homepage Only
+                                        <?php elseif($rule_target === 'custom'): ?>
+                                            ID: <?php echo esc_html($custom_id); ?>
+                                        <?php elseif($rule_target === 'post_type'): ?>
+                                            Type: <?php echo esc_html($custom_id); ?>
+                                        <?php elseif($rule_target === 'page_template'): ?>
+                                            Tpl: <?php echo esc_html($custom_id); ?>
+                                        <?php endif; ?>
+                                        
+                                        <!-- Keep hidden inputs for target data -->
+                                        <input type="number" 
+                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_num]" 
+                                            value="<?php echo ($show_custom ? esc_attr($custom_id) : ''); ?>" 
+                                            style="display:none;" class="target-id-input">
+                                        
                                         <input type="hidden" class="final-custom-id"
                                             name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id]"
                                             value="<?php echo esc_attr($custom_id); ?>">
 
-                                    </td>
-                                    <td>
-                                        <input type="text"
-                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][handle]"
-                                            value="<?php echo esc_attr(isset($rule['handle']) ? $rule['handle'] : ''); ?>"
-                                            style="width:100%" placeholder="e.g. jquery">
+                                        <!-- Post Type Select Hidden Clone (simplification) -->
+                                        <input type="hidden" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_type]" value="<?php echo $show_post_type ? esc_attr($custom_id) : ''; ?>">
+                                        <input type="hidden" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][custom_id_tpl]" value="<?php echo $show_template ? esc_attr($custom_id) : ''; ?>">
+                                    </div>
+                                </td>
 
-                                        <!-- Advanced Options Toggle -->
-                                        <div class="advanced-opts-toggle"
-                                            style="margin-top:5px; font-size:11px; color:#0073aa; cursor:pointer;">
-                                            <span class="dashicons dashicons-admin-settings"
-                                                style="font-size:12px; height:12px; width:12px;"></span> Advanced
-                                        </div>
-                                        <div class="advanced-opts"
-                                            style="display:none; margin-top:5px; padding:5px; background:#f0f0f1; border-radius:3px;">
-                                            <label style="display:block; font-size:11px;">
-                                                <input type="checkbox"
-                                                    name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][is_regex]"
-                                                    value="1" <?php checked(isset($rule['is_regex']) ? $rule['is_regex'] : 0, 1); ?>>
-                                                Regex Match
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <select
-                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][type]"
-                                            style="width:100%">
-                                            <option value="js" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'js'); ?>>JS</option>
-                                            <option value="css" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'css'); ?>>CSS</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select
-                                            name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][strategy]"
-                                            class="rule-strategy-select" style="width:100%">
-                                            <option value="async" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'async'); ?>
-                                                title="Load in parallel, execute immediately when ready">Async</option>
-                                            <option value="defer" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'defer'); ?>
-                                                title="Load in parallel, execute after HTML parsing">Defer</option>
-                                            <option value="delay" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'delay'); ?>
-                                                title="Delay loading until user interaction (click/scroll)">Delay</option>
-                                            <option value="preload" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'preload'); ?>
-                                                title="Preload with high priority for critical assets">Preload</option>
-                                            <option value="disable" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'disable'); ?>
-                                                title="Completely disable this asset on the target">Disable</option>
-                                        </select>
-                                        <span class="strategy-description"
-                                            style="display:block; font-size:11px; color:#666; margin-top:4px;"></span>
-                                        <label class="crossorigin-opt"
-                                            style="display:<?php echo (isset($rule['strategy']) && $rule['strategy'] === 'preload') ? 'block' : 'none'; ?>; margin-top:4px; font-size:11px;">
-                                            <input type="checkbox"
-                                                name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][crossorigin]"
-                                                value="1" <?php checked(isset($rule['crossorigin']) ? $rule['crossorigin'] : 0, 1); ?>>
-                                            Crossorigin
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="button remove-rule-btn"><span
-                                                class="dashicons dashicons-trash"></span></button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                                <td width="15%">
+                                    <select name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][type]" style="width:100%">
+                                        <option value="js" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'js'); ?>>JS</option>
+                                        <option value="css" <?php selected(isset($rule['type']) ? $rule['type'] : 'js', 'css'); ?>>CSS</option>
+                                    </select>
+                                </td>
+
+                                <td width="35%">
+                                    <select name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][strategy]" class="rule-strategy-select" style="width:100%">
+                                        <option value="async" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'async'); ?> title="Parallel load">Async</option>
+                                        <option value="defer" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'defer'); ?> title="After parsing">Defer</option>
+                                        <option value="delay" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'delay'); ?> title="On interaction">Delay</option>
+                                        <option value="preload" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'preload'); ?> title="High priority">Preload</option>
+                                        <option value="disable" <?php selected(isset($rule['strategy']) ? $rule['strategy'] : 'async', 'disable'); ?> title="Do not load">Disable</option>
+                                    </select>
+                                    
+                                    <label class="crossorigin-opt" style="display:<?php echo (isset($rule['strategy']) && $rule['strategy'] === 'preload') ? 'block' : 'none'; ?>; margin-top:4px; font-size:11px;">
+                                        <input type="checkbox" name="optimize_speed_settings[script_manager_rules][<?php echo $i; ?>][crossorigin]" value="1" <?php checked(isset($rule['crossorigin']) ? $rule['crossorigin'] : 0, 1); ?>>
+                                        Crossorigin
+                                    </label>
+                                </td>
+
+                                <td width="10%" style="text-align:right;">
+                                    <button type="button" class="button remove-rule-btn" style="color:#a00;"><span class="dashicons dashicons-trash" style="margin-top:3px;"></span></button>
+                                </td>
+                            </tr>
+                            <?php
+                        }
+                    }
+
+                    // Prepare Groups
+                    $rules_global = [];
+                    $rules_homepage = [];
+                    $rules_specific = [];
+
+                    $rules = isset($options['script_manager_rules']) ? $options['script_manager_rules'] : [];
+                    if (!is_array($rules)) $rules = [];
+
+                    foreach ($rules as $i => $rule) {
+                        $t = isset($rule['target']) ? $rule['target'] : 'global';
+                        $rule['_index'] = $i; // Keep original index for saving
+                        
+                        if ($t === 'global') $rules_global[] = $rule;
+                        elseif ($t === 'homepage') $rules_homepage[] = $rule;
+                        else $rules_specific[] = $rule; 
+                    }
+                    ?>
+                    
+                    <div id="rules-containers">
+                        <?php foreach(['global' => $rules_global, 'homepage' => $rules_homepage, 'specific' => $rules_specific] as $key => $group_rules): ?>
+                        <div id="rules-<?php echo $key; ?>" class="rules-tab-content" style="<?php echo $key === 'global' ? '' : 'display:none;'; ?>">
+                            <table class="wp-list-table widefat fixed striped rules-table-v2" data-tab="<?php echo $key; ?>">
+                                <thead>
+                                    <tr>
+                                        <th>Asset Info</th>
+                                        <th>Type</th>
+                                        <th>Strategy</th>
+                                        <th style="text-align:right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="rules-tbody-target">
+                                    <?php if(empty($group_rules)): ?>
+                                        <tr class="no-rules-row"><td colspan="4" style="text-align:center; padding:20px; color:#666;">No rules found in this section.</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($group_rules as $rule) {
+                                            os_render_rule_row($rule['_index'], $rule, $post_types, $templates, $exclude_types);
+                                        } ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                            <!-- Add Manual Rule Button for this section? Maybe too complex. Let's keep scanner as primary add method. -->
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- Hidden Template for JS Adding Row -->
+                    <!-- JS needs to replicate the structure above. -->
                 </div>
 
-                <?php submit_button('Save Settings'); ?>
+                <?php submit_button('Save Settings', 'primary', 'submit_scripts'); ?>
             </div>
 
             <!-- Performance Tab -->
@@ -558,7 +640,7 @@ $options = get_option('optimize_speed_settings', []);
                     </div>
                 </div>
 
-                <?php submit_button('Save Settings'); ?>
+                <?php submit_button('Save Settings', 'primary', 'submit_perf'); ?>
             </div>
 
             <!-- Image Optimization Tab -->
@@ -598,7 +680,7 @@ $options = get_option('optimize_speed_settings', []);
                             </span>
                         </label>
                     </div>
-                    <?php submit_button('Save Settings'); ?>
+                    <?php submit_button('Save Settings', 'primary', 'submit_db'); ?>
 
                     <hr style="margin: 20px 0;">
 

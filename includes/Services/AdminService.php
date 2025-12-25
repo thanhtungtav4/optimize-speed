@@ -18,6 +18,10 @@ class AdminService implements ServiceInterface
         add_action('admin_init', [$this, 'settings_init']);
         add_action('admin_enqueue_scripts', [$this, 'admin_assets']);
         add_action('admin_head', [$this, 'admin_styles']);
+
+        // AJAX endpoint for asset scanner
+        add_action('wp_ajax_os_scan_assets', [$this, 'ajax_scan_assets']);
+        add_action('wp_ajax_os_get_posts_by_type', [$this, 'ajax_get_posts_by_type']);
     }
 
     public function boot()
@@ -201,7 +205,7 @@ class AdminService implements ServiceInterface
             'optimize-speed-admin',
             plugins_url('assets/js/admin.js', dirname(dirname(__FILE__))),
             ['jquery'],
-            '1.1.0', // Increment version to bust cache
+            '1.1.4', // Increment version to bust cache
             true
         );
 
@@ -225,5 +229,117 @@ class AdminService implements ServiceInterface
     public function admin_styles()
     {
         // Styles moved to assets/css/admin.css
+    }
+
+    /**
+     * AJAX handler for scanning page assets
+     */
+    public function ajax_scan_assets()
+    {
+        // Verify nonce
+        check_ajax_referer('optimize_speed_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Unauthorized']);
+        }
+
+        $url = isset($_POST['url']) ? esc_url_raw($_POST['url']) : '';
+
+        if (empty($url)) {
+            wp_send_json_error(['message' => 'URL is required']);
+        }
+
+        // Add scan parameter to URL
+        $scan_url = add_query_arg([
+            'os_scan_assets' => '1',
+            'os_key' => substr(md5(NONCE_SALT . 'os_scan'), 0, 16)
+        ], $url);
+
+        // Close session to prevent locking (fix for cURL timeout)
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        // Fetch the page content
+        $response = wp_remote_get($scan_url, [
+            'timeout' => 60,
+            'sslverify' => false,
+            'user-agent' => 'OptimizeSpeed Scanner/1.0'
+        ]);
+
+        if (is_wp_error($response)) {
+            wp_send_json_error(['message' => 'Failed to fetch: ' . $response->get_error_message()]);
+        }
+
+        $body = wp_remote_retrieve_body($response);
+
+        // Try to parse JSON from response
+        $data = json_decode($body, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && isset($data['success']) && $data['success']) {
+            wp_send_json_success($data['data']);
+        }
+
+        // Fallback: parse HTML for script/style tags
+        $assets = $this->parse_assets_from_html($body);
+        wp_send_json_success($assets);
+    }
+
+    /**
+     * Parse assets from HTML when JSON response fails
+     */
+    private function parse_assets_from_html($html)
+    {
+        $assets = ['js' => [], 'css' => []];
+
+        // Parse script tags
+        preg_match_all('/<script[^>]*src=["\']([^"\']+)["\'][^>]*>/i', $html, $scripts);
+        foreach ($scripts[1] as $src) {
+            $handle = basename(parse_url($src, PHP_URL_PATH), '.js');
+            $assets['js'][] = ['handle' => $handle, 'src' => $src];
+        }
+
+        // Parse link tags (stylesheets)
+        preg_match_all('/<link[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*>/i', $html, $styles);
+        foreach ($styles[1] as $src) {
+            $handle = basename(parse_url($src, PHP_URL_PATH), '.css');
+            $assets['css'][] = ['handle' => $handle, 'src' => $src];
+        }
+
+        return $assets;
+    }
+
+    /**
+     * AJAX handler to fetch posts by type
+     */
+    public function ajax_get_posts_by_type()
+    {
+        // Verify nonce
+        check_ajax_referer('optimize_speed_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Unauthorized']);
+        }
+
+        $post_type = isset($_POST['post_type']) ? sanitize_text_field($_POST['post_type']) : 'post';
+
+        $posts = get_posts([
+            'post_type' => $post_type,
+            'numberposts' => 50,
+            'post_status' => 'publish',
+            'orderby' => 'date',
+            'order' => 'DESC'
+        ]);
+
+        $data = [];
+        foreach ($posts as $post) {
+            $data[] = [
+                'id' => $post->ID,
+                'title' => $post->post_title,
+                'permalink' => get_permalink($post->ID)
+            ];
+        }
+
+        wp_send_json_success($data);
     }
 }

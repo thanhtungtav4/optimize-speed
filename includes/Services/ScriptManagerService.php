@@ -108,10 +108,7 @@ class ScriptManagerService implements ServiceInterface
             foreach ($wp_scripts->queue as $handle) {
                 if (isset($wp_scripts->registered[$handle])) {
                     $src = $wp_scripts->registered[$handle]->src;
-                    $assets['js'][] = [
-                        'handle' => $handle,
-                        'src' => $src
-                    ];
+                    $assets['js'][] = $this->prepare_asset_data($handle, $src, 'js');
                 }
             }
         }
@@ -121,10 +118,7 @@ class ScriptManagerService implements ServiceInterface
             foreach ($wp_styles->queue as $handle) {
                 if (isset($wp_styles->registered[$handle])) {
                     $src = $wp_styles->registered[$handle]->src;
-                    $assets['css'][] = [
-                        'handle' => $handle,
-                        'src' => $src
-                    ];
+                    $assets['css'][] = $this->prepare_asset_data($handle, $src, 'css');
                 }
             }
         }
@@ -138,6 +132,58 @@ class ScriptManagerService implements ServiceInterface
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => true, 'data' => $assets]);
         exit;
+    }
+
+    private function prepare_asset_data($handle, $src, $type)
+    {
+        $data = [
+            'handle' => $handle,
+            'src' => $src,
+            'source' => 'other',
+            'size' => 0,
+            'size_formatted' => ''
+        ];
+
+        // 1. Detect Source
+        if (strpos($src, '/plugins/') !== false) {
+            $data['source'] = 'plugin';
+            // Extract plugin name: /plugins/plugin-name/
+            if (preg_match('#/plugins/([^/]+)/#', $src, $m)) {
+                $data['source_name'] = $m[1];
+            } else {
+                $data['source_name'] = 'Unknown Plugin';
+            }
+        } elseif (strpos($src, '/themes/') !== false) {
+            $data['source'] = 'theme';
+            if (preg_match('#/themes/([^/]+)/#', $src, $m)) {
+                $data['source_name'] = ucfirst($m[1]);
+            } else {
+                $data['source_name'] = 'Theme';
+            }
+        } elseif (strpos($src, '/wp-includes/') !== false || strpos($src, '/wp-admin/') !== false) {
+            $data['source'] = 'core';
+            $data['source_name'] = 'WordPress Core';
+        } else {
+            $data['source_name'] = 'External/Other';
+        }
+
+        // 2. Calculate Size (Local files only)
+        if ($src && (strpos($src, 'http') === false || strpos($src, site_url()) !== false)) {
+            // Convert URL to Path
+            $rel_path = wp_make_link_relative($src);
+            $file_path = ABSPATH . ltrim($rel_path, '/');
+
+            // Fix for query strings
+            $file_path = strtok($file_path, '?');
+
+            if (file_exists($file_path)) {
+                $size = filesize($file_path);
+                $data['size'] = $size;
+                $data['size_formatted'] = size_format($size);
+            }
+        }
+
+        return $data;
     }
 
     public function inject_preload_hints()
